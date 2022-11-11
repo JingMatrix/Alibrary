@@ -1,4 +1,4 @@
-#! /bin/python3
+#! python3
 
 # Requirements:
 # 1. [aligo](https://github.com/foyoux/aligo), which is available on pypi.org
@@ -6,99 +6,118 @@
 # 2. An (aliyun)[https://www.aliyundrive.com/] account
 
 # Usage Example:
-# 1. Generate share link index data in the foler $share_file_list_directory
+# 1. Store share link index data into redis
 # > python3 ./aliyun-share https://www.aliyundrive.com/s/wnfVTd1u92T/folder/619010166fe8c7b3e00f4acd813c9ed47b5fbddc
-# 2. Find desired file_id in the index file `619010166fe8c7b3e00f4acd813c9ed47b5fbddc.json`,
-#   for example, we choose the file `[黎曼几何].Jost.Riemannian.Geometry.and.Geome.pdf` with file_id 619010164dbe4eab5e3f4c5db1611344350e0f2a
-# > python3 ./aliyun-share 619010164dbe4eab5e3f4c5db1611344350e0f2a
 
 # Config:
-# Modify the variables $share_file_list_directory, $share_id_data_file and $download_dir.
-
+# Modify the variables $share_id_data_file and $download_dir.
 
 import os
-import json
 import re
 import sys
+import tempfile
 
-share_file_list_directory = '$HOME/Archives/Data/Ebooks/Aliyun/'
-share_id_data_file = '/tmp/share_id'
-download_dir = '/tmp'
+from aligo import Aligo, BaseShareFile, GetShareTokenResponse
+from redis_om import HashModel, Field
 
+share_id_data_file = tempfile.gettempdir() + '/share_id'
+download_dir = tempfile.gettempdir()
+
+# Call this script without arguments to login or persist login info
 if len(sys.argv) == 1:
     # refresh login token
     from aligo import Auth
     Auth(name='aligo')._refresh_token()
     sys.exit()
 
-match_share_id = re.match(r"https://www.aliyundrive.com/s/([^/]+)(/folder)?",
-                    sys.argv[1])
 
-if match_share_id:
-    share_id = match_share_id.group(1)
-else:
-    share_id = ''
+class AliShareInfo(HashModel):
+    share_id: str = None
+    file_extension: str = None
+    name: str = Field(index=True)
+    size: int = None
+    file_id: str = Field(primary_key=True)
+    type: str = None
 
-match_file_id = re.match(r".*([0-9a-f]{40})$", sys.argv[1])
-if match_file_id:
-    file_id = match_file_id.group(1)
-else:
-    file_id = ''
+    @staticmethod
+    def strip(data: BaseShareFile):
+        return AliShareInfo(share_id=data.share_id,
+                            file_id=data.file_id,
+                            name=data.name,
+                            size=data.size,
+                            file_extension=data.file_extension,
+                            type=data.type)
 
-download_path = ''
-if len(sys.argv) > 2:
-    download_path = os.path.expanduser(sys.argv[2])
 
-if share_id == '':
-    single_file = True
-    if os.path.exists(share_id_data_file):
-        print('Reading share id from ' + share_id_data_file)
-        f = open(share_id_data_file, 'r')
-        share_id = f.read().strip()
-        f.close()
+def get_share_id(share_id_data_file: str = tempfile.gettempdir() + '/share_id') -> str:
+    match_share_id = re.match(
+        r"https://www.aliyundrive.com/s/([^/]+)(/folder)?", sys.argv[1])
+    if match_share_id:
+        share_id = match_share_id.group(1)
     else:
-        print('No way to determinate share_id, exiting...')
-        exit()
-else:
-    single_file = False
+        if os.path.exists(share_id_data_file):
+            print('Reading share id from ' + share_id_data_file)
+            f = open(share_id_data_file, 'r')
+            share_id = f.read().strip()
+            f.close()
+        else:
+            print('No way to determinate share_id, exiting...')
+            exit()
 
-f = open(share_id_data_file, 'w')
-f.write(share_id)
-f.close()
+    f = open(share_id_data_file, 'w')
+    f.write(share_id)
+    f.close()
+    return share_id
 
-from aligo import Aligo
-from dataclasses import asdict
+
+def get_file_id(share_id: str = None) -> str:
+    match_file_id = re.match(r".*([0-9a-f]{40})$", sys.argv[1])
+    if match_file_id:
+        return match_file_id.group(1)
+    else:
+        return ali.get_share_info(share_id=share_id).file_infos[0].file_id
+
+
+def record(share_info: AliShareInfo, share_token: GetShareTokenResponse = None):
+    redis_connection = AliShareInfo.db()
+    if redis_connection.exists(share_info.key()):
+        return
+
+    if share_token is None:
+        share_token = ali.get_share_token(get_share_id())
+
+    if share_info.type == 'folder':
+        file_list = ali.get_share_file_list(share_id=share_info.share_id,
+                                            share_token=share_token,
+                                            parent_file_id=share_info.file_id)
+        for file in file_list:
+            record(AliShareInfo.strip(file), share_token=share_token)
+    elif share_info.type == 'file':
+        share_info.save()
+        # print('Index data saved as ', share_info.key())
+
+
+def download(share_info: AliShareInfo, share_token: GetShareTokenResponse = None,
+             download_dir: str = tempfile.gettempdir()):
+    if len(sys.argv) > 2:
+        download_path = os.path.expanduser(sys.argv[2])
+    else:
+        download_path = download_dir + '/' + share_info.name
+
+    download_url = ali.get_share_link_download_url(
+        share_id=share_info.share_id,
+        file_id=share_info.file_id,
+        share_token=share_token
+    ).download_url
+    ali.download_file(file_path=download_path, url=download_url)
+
 
 ali = Aligo(use_aria2=True)
-share_info = ali.get_share_info(share_id)
+share_id = get_share_id()
 share_token = ali.get_share_token(share_id)
-if share_info.file_infos[0].type == 'folder' and not single_file:
-    save_path = share_file_list_directory + file_id + '.json'
-    if os.path.exists(save_path):
-        print('file list data exits as ' + save_path)
-        exit()
-
-    f = open(save_path, 'w',
-             encoding='utf8')
-    file_list = ali.get_share_file_list(share_id=share_id,
-                                        share_token=share_token,
-                                        parent_file_id=file_id)
-    f.write('[' + ',\n'.join([
-        json.dumps(asdict(file), indent=4, ensure_ascii=False).encode(
-            'utf8').decode() for file in file_list
-    ]) + ']')
-    f.close()
-    print('file list data saved to the directory ' +
-          share_file_list_directory)
-else:
-    if file_id == '':
-        file_id = share_info.file_infos[0].file_id
-    download_url = ali.get_share_link_download_url(
-        share_id=share_id, share_token=share_token,
-        file_id=file_id).download_url
-    if download_path == '':
-        download_path = download_dir + '/' + ali.get_share_file(
-            share_id=share_id,
-            share_token=share_token.share_token,
-            file_id=file_id).name
-    ali.download_file(file_path=download_path, url=download_url)
+if share_id and share_token:
+    file_id = get_file_id(share_id)
+    share_info = AliShareInfo.strip(ali.get_share_file(share_id=share_id, file_id=file_id, share_token=share_token))
+    record(share_info, share_token=share_token)
+    if share_info.type == 'file':
+        download(share_info=share_info, share_token=share_token, download_dir=download_dir)

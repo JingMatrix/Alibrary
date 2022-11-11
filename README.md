@@ -17,10 +17,11 @@ This project _SHOULD_ reach the following goals:
 We use the following projects:
 1. [aligo](https://github.com/foyoux/aligo), `python3` API of aliyundrive,
 2. [aria2](https://github.com/aria2/aria2), optional download utility,
-3. [redis](https://github.com/redis/redis), database.
+3. [redis-stack](https://redis.io/download/), database.
 
 ## Development plans
 
-- [ ] Migrate database to `redis`
+- [x] Migrate database to `redis`
+- [ ] Implement search API
 - [ ] Run as cloud service
 - [ ] User-friendly front end for public usage
