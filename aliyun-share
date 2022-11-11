@@ -10,7 +10,7 @@
 # > python3 ./aliyun-share https://www.aliyundrive.com/s/wnfVTd1u92T/folder/619010166fe8c7b3e00f4acd813c9ed47b5fbddc
 
 # Config:
-# Modify the variables $share_id_data_file and $download_dir.
+# Modify the variables: $download_dir.
 
 import os
 import re
@@ -19,8 +19,9 @@ import tempfile
 
 from aligo import Aligo, BaseShareFile, GetShareTokenResponse
 from redis_om import HashModel, Field
+from redis.commands.search.query import Query
+from migrator import Migrator
 
-share_id_data_file = tempfile.gettempdir() + '/share_id'
 download_dir = tempfile.gettempdir()
 
 # Call this script without arguments to login or persist login info
@@ -34,7 +35,7 @@ if len(sys.argv) == 1:
 class AliShareInfo(HashModel):
     share_id: str = None
     file_extension: str = None
-    name: str = Field(index=True)
+    name: str = Field(index=True, full_text_search=True)
     size: int = None
     file_id: str = Field(primary_key=True)
     type: str = None
@@ -49,25 +50,26 @@ class AliShareInfo(HashModel):
                             type=data.type)
 
 
-def get_share_id(share_id_data_file: str = tempfile.gettempdir() + '/share_id') -> str:
+def get_share_id(
+        share_id_data_file: str = tempfile.gettempdir() + '/share_id') -> str:
     match_share_id = re.match(
         r"https://www.aliyundrive.com/s/([^/]+)(/folder)?", sys.argv[1])
     if match_share_id:
         share_id = match_share_id.group(1)
-    else:
-        if os.path.exists(share_id_data_file):
-            print('Reading share id from ' + share_id_data_file)
-            f = open(share_id_data_file, 'r')
-            share_id = f.read().strip()
-            f.close()
-        else:
-            print('No way to determinate share_id, exiting...')
-            exit()
-
-    f = open(share_id_data_file, 'w')
-    f.write(share_id)
-    f.close()
-    return share_id
+        f = open(share_id_data_file, 'w')
+        f.write(share_id)
+        f.close()
+        return share_id
+    # ###The follwoing code conficts with redis search API.###
+    # else:
+    #     if os.path.exists(share_id_data_file):
+    #         print('Reading share id from ' + share_id_data_file)
+    #         f = open(share_id_data_file, 'r')
+    #         share_id = f.read().strip()
+    #         f.close()
+    #     else:
+    #         print('No way to determinate share_id, exiting...')
+    #         exit()
 
 
 def get_file_id(share_id: str = None) -> str:
@@ -78,7 +80,8 @@ def get_file_id(share_id: str = None) -> str:
         return ali.get_share_info(share_id=share_id).file_infos[0].file_id
 
 
-def record(share_info: AliShareInfo, share_token: GetShareTokenResponse = None):
+def record(share_info: AliShareInfo,
+           share_token: GetShareTokenResponse = None):
     redis_connection = AliShareInfo.db()
     if redis_connection.exists(share_info.key()):
         return
@@ -97,7 +100,8 @@ def record(share_info: AliShareInfo, share_token: GetShareTokenResponse = None):
         # print('Index data saved as ', share_info.key())
 
 
-def download(share_info: AliShareInfo, share_token: GetShareTokenResponse = None,
+def download(share_info: AliShareInfo,
+             share_token: GetShareTokenResponse = None,
              download_dir: str = tempfile.gettempdir()):
     if len(sys.argv) > 2:
         download_path = os.path.expanduser(sys.argv[2])
@@ -107,17 +111,31 @@ def download(share_info: AliShareInfo, share_token: GetShareTokenResponse = None
     download_url = ali.get_share_link_download_url(
         share_id=share_info.share_id,
         file_id=share_info.file_id,
-        share_token=share_token
-    ).download_url
+        share_token=share_token).download_url
     ali.download_file(file_path=download_path, url=download_url)
 
 
-ali = Aligo(use_aria2=True)
+def search(search_text: str = None):
+    Migrator().run()
+    # redis_connection = AliShareInfo.db()
+    print(
+        AliShareInfo.db().ft(index_name=':__main__.AliShareInfo:index').search(
+            Query(search_text).language('chinese').paging(0, 5)))
+
+
 share_id = get_share_id()
-share_token = ali.get_share_token(share_id)
-if share_id and share_token:
+if share_id:
+    ali = Aligo(use_aria2=True)
+    share_token = ali.get_share_token(share_id)
     file_id = get_file_id(share_id)
-    share_info = AliShareInfo.strip(ali.get_share_file(share_id=share_id, file_id=file_id, share_token=share_token))
+    share_info = AliShareInfo.strip(
+        ali.get_share_file(share_id=share_id,
+                           file_id=file_id,
+                           share_token=share_token))
     record(share_info, share_token=share_token)
     if share_info.type == 'file':
-        download(share_info=share_info, share_token=share_token, download_dir=download_dir)
+        download(share_info=share_info,
+                 share_token=share_token,
+                 download_dir=download_dir)
+else:
+    search(sys.argv[1])
