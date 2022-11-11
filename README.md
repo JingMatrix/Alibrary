@@ -16,10 +16,33 @@ This project _SHOULD_ reach the following goals:
 
 We use the following projects:
 1. [aligo](https://github.com/foyoux/aligo), `python3` API of aliyundrive,
-2. [redis-stack](https://redis.io/download/), database,
+2. [redis](https://github.com/redis/redis) with [RedisSearch](https://github.com/RediSearch/RediSearch) [loaded](https://redis.io/docs/stack/search/quick_start/); alternatively, one can choose [redis-stack](https://redis.io/download/), database,
 3. [redis-om-python](https://github.com/redis/redis-om-python), `pthon3` API for `redis`,
 4. [python-prompt-toolkit](https://github.com/prompt-toolkit/python-prompt-toolkit), search prompt interface,
 4. [aria2](https://github.com/aria2/aria2), optional download utility.
+
+## Performance
+
+1. Index speed: 63886 indexes in around 15 minuties.
+
+## Usage
+
+The first step is start the redis-sever:
+```sh
+redis-server --dir . --dbfilename archive.rdb --loadmodule /path/to/redisearch.so
+
+```
+The module `redisearch.so` above should be compiled on your OS.
+
+If you don't want to comiple it, please download and use `redis-stack` insteadly:
+```sh
+redis-stack-server --dir . --dbfilename archive.rdb
+```
+If your `redis-server` or `redis-stack-sever` is alreading runing, please stop it first.
+
+Then you can see search in database and index share links using `aliyun-share`,
+see comments inside for usages.
+As for search syntax, please refer to the [offical docs](https://redis.io/docs/stack/search/reference/query_syntax/).
 
 ## Development plans
 
