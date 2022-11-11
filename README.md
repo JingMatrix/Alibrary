@@ -23,26 +23,29 @@ We use the following projects:
 
 ## Performance
 
-1. Index speed: 63886 indexes in around 15 minuties.
+1. Index speed: 63886 indexes in around 15 minutes.
 
 ## Usage
 
-The first step is start the redis-sever:
+To begin with, please download `archive.rdb` in the [release page](https://github.com/JingMatrix/Alibrary/releases) as sample dataset.
+Our database `archive.rdb` includes all indexes from [well-chosen share links](share_urls.md).
+
+The next step is to start the redis-sever:
 ```sh
 redis-server --dir . --dbfilename archive.rdb --loadmodule /path/to/redisearch.so
 
 ```
 The module `redisearch.so` above should be compiled on your OS.
 
-If you don't want to comiple it, please download and use `redis-stack` insteadly:
+If you don't want to compile it, please download and use `redis-stack` instead:
 ```sh
 redis-stack-server --dir . --dbfilename archive.rdb
 ```
-If your `redis-server` or `redis-stack-sever` is alreading runing, please stop it first.
+If your `redis-server` or `redis-stack-sever` is already running, please stop it first.
 
-Then you can see search in database and index share links using `aliyun-share`,
-see comments inside for usages.
-As for search syntax, please refer to the [offical docs](https://redis.io/docs/stack/search/reference/query_syntax/).
+Finally, you can search indexes in our sample database or index your costume share links using [aliyun-share](aliyun-share),
+see comments inside it for details.
+As for search syntax, please refer to the [official docs](https://redis.io/docs/stack/search/reference/query_syntax/).
 
 ## Development plans
 
