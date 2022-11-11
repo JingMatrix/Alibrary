@@ -8,6 +8,9 @@
 # Usage Example:
 # 1. Store share link index data into redis
 # > python3 ./aliyun-share https://www.aliyundrive.com/s/wnfVTd1u92T/folder/619010166fe8c7b3e00f4acd813c9ed47b5fbddc
+# 2. Invoke researches from redis
+# > python3 ./aliyun-share 'YOUR SEARCHES'
+# TODO: More friendly interface to parse search results
 
 # Config:
 # Modify the variables: $download_dir.
