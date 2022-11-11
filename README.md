@@ -18,12 +18,14 @@ We use the following projects:
 1. [aligo](https://github.com/foyoux/aligo), `python3` API of aliyundrive,
 2. [redis-stack](https://redis.io/download/), database,
 3. [redis-om-python](https://github.com/redis/redis-om-python), `pthon3` API for `redis`,
+4. [python-prompt-toolkit](https://github.com/prompt-toolkit/python-prompt-toolkit), search prompt interface,
 4. [aria2](https://github.com/aria2/aria2), optional download utility.
 
 ## Development plans
 
 - [x] Migrate database to `redis`
 - [x] Implement search API
-- [ ] Add cli prompt interface
+- [x] Add cli prompt interface
+- [ ] Improve prompt interface
 - [ ] Run as cloud service
 - [ ] User-friendly front end for public usage

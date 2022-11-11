@@ -12,18 +12,15 @@
 # > python3 ./aliyun-share 'YOUR SEARCHES'
 # TODO: More friendly interface to parse search results
 
-# Config:
-# Modify the variables: $download_dir.
-
-import os
 import re
 import sys
 import tempfile
 
-from aligo import Aligo, BaseShareFile, GetShareTokenResponse
-from redis_om import HashModel, Field
-from redis.commands.search.query import Query
+from aligo import Aligo, GetShareTokenResponse
+from prompt import SearchPrompt
 from migrator import Migrator
+from type import AliShareInfo
+from download import Download
 
 download_dir = tempfile.gettempdir()
 
@@ -33,24 +30,6 @@ if len(sys.argv) == 1:
     from aligo import Auth
     Auth(name='aligo')._refresh_token()
     sys.exit()
-
-
-class AliShareInfo(HashModel):
-    share_id: str = None
-    file_extension: str = None
-    name: str = Field(index=True, full_text_search=True)
-    size: int = None
-    file_id: str = Field(primary_key=True)
-    type: str = None
-
-    @staticmethod
-    def strip(data: BaseShareFile):
-        return AliShareInfo(share_id=data.share_id,
-                            file_id=data.file_id,
-                            name=data.name,
-                            size=data.size,
-                            file_extension=data.file_extension,
-                            type=data.type)
 
 
 def get_share_id(
@@ -103,32 +82,9 @@ def record(share_info: AliShareInfo,
         # print('Index data saved as ', share_info.key())
 
 
-def download(share_info: AliShareInfo,
-             share_token: GetShareTokenResponse = None,
-             download_dir: str = tempfile.gettempdir()):
-    if len(sys.argv) > 2:
-        download_path = os.path.expanduser(sys.argv[2])
-    else:
-        download_path = download_dir + '/' + share_info.name
-
-    download_url = ali.get_share_link_download_url(
-        share_id=share_info.share_id,
-        file_id=share_info.file_id,
-        share_token=share_token).download_url
-    ali.download_file(file_path=download_path, url=download_url)
-
-
-def search(search_text: str = None):
-    Migrator().run()
-    # redis_connection = AliShareInfo.db()
-    print(
-        AliShareInfo.db().ft(index_name=':__main__.AliShareInfo:index').search(
-            Query(search_text).language('chinese').paging(0, 5)))
-
-
 share_id = get_share_id()
 if share_id:
-    ali = Aligo(use_aria2=True)
+    ali = Aligo()
     share_token = ali.get_share_token(share_id)
     file_id = get_file_id(share_id)
     share_info = AliShareInfo.strip(
@@ -137,8 +93,12 @@ if share_id:
                            share_token=share_token))
     record(share_info, share_token=share_token)
     if share_info.type == 'file':
-        download(share_info=share_info,
+        Download(share_info=share_info,
                  share_token=share_token,
                  download_dir=download_dir)
+    else:
+        Migrator().run()
+        SearchPrompt(db=AliShareInfo.db())
 else:
-    search(sys.argv[1])
+    Migrator().run()
+    SearchPrompt(db=AliShareInfo.db(), search_text=sys.argv[1])
