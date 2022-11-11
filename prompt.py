@@ -51,9 +51,10 @@ class SearchPrompt:
         self.index = db.ft(index_name=':type.AliShareInfo:index')
         if self.search_text is None:
             self.search_prompt()
+            self.download_prompt()
         else:
             self.retrieve()
-            self.downoad_prompt()
+            self.download_prompt()
 
     def search_prompt(self):
         self.search_text = self.session.prompt('Please enter a string to invoke search: ',
@@ -70,7 +71,7 @@ class SearchPrompt:
         for idx, doc in enumerate(self.docs):
             print(idx + self.offset + 1, doc.name)
 
-    def downoad_prompt(self):
+    def download_prompt(self):
         idx: int = self.session.prompt('Please choose a file to download: ',
                                        key_bindings=self.bindings,
                                        validator=NumberValidator(self.offset + 1, self.offset + self.num),
