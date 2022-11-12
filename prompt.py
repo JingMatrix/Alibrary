@@ -2,9 +2,11 @@ from redis_om import redis
 from redis.commands.search.query import Query
 from redis.commands.search.document import Document
 from prompt_toolkit import PromptSession, print_formatted_text as print, HTML
+from prompt_toolkit.formatted_text import FormattedText
 from prompt_toolkit.validation import Validator, ValidationError, DummyValidator
 from prompt_toolkit.key_binding import KeyBindings
 from download import Download
+from humanize import naturalsize
 import importlib
 
 Search = importlib.import_module("redis-stubs.commands.search")
@@ -90,7 +92,9 @@ class SearchPrompt:
                 HTML('We have in total <b>' + str(self.total) +
                      '</b> results'))
             for idx, doc in enumerate(self.docs):
-                print(idx + self.offset + 1, doc.name)
+                print(FormattedText([('#E9CD4C', str(idx + self.offset + 1).ljust(6)),
+                                     ('#2EA9DF', doc.name),
+                                     ('#707C74', '  ' + naturalsize(doc.size, binary=True))]))
 
     def download_prompt(self):
         if self.total > 0:
