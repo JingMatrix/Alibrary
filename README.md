@@ -24,12 +24,14 @@ We use the following projects:
 
 ## Performance
 
-1. Index speed: 63886 indexes in around 15 minutes.
+1. Index speed: 63886 indexes done in around 15 minutes (with the author's average internet connection).
+2. Index data size: 150644 indexes within size 34M.
 
 ## Usage
 
-To begin with, please download `archive.rdb` in the [release page](https://github.com/JingMatrix/Alibrary/releases) as sample dataset.
-Our database `archive.rdb` includes all indexes from [well-chosen share links](share_urls.md).
+To begin with, you can download `archive.rdb` in the [release page](https://github.com/JingMatrix/Alibrary/releases) as sample dataset.
+Our database `archive.rdb` includes all indexes from [well-chosen share links](share_urls.md),
+and it contains 150644 records of e-books.
 
 The next step is to start the redis-sever:
 ```sh
@@ -37,12 +39,14 @@ redis-server --dir . --dbfilename archive.rdb --loadmodule /path/to/redisearch.s
 
 ```
 The module `redisearch.so` above should be compiled on your OS.
+Complied binaries from `Android arm64` and `Linux amd64` could be found in the [release page](https://github.com/JingMatrix/Alibrary/releases/tag/v0.2).
 
 If you don't want to compile it, please download and use `redis-stack` instead:
 ```sh
 redis-stack-server --dir . --dbfilename archive.rdb
 ```
 If your `redis-server` or `redis-stack-sever` is already running, please stop it first.
+Please notice that our `archive.rdb` requires `redis-sever` with version higher than `v7.0`.
 
 Finally, you can search indexes in our sample database or index your costume share links using [aliyun-share](aliyun-share),
 see comments inside it for details.
@@ -53,6 +57,6 @@ As for search syntax, please refer to the [official docs](https://redis.io/docs/
 - [x] Migrate database to `redis`
 - [x] Implement search API
 - [x] Add cli prompt interface
-- [ ] Improve prompt interface
+- [x] Improve prompt interface
 - [ ] Run as cloud service
 - [ ] User-friendly front end for public usage
