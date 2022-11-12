@@ -92,15 +92,18 @@ class SearchPrompt:
                 print(idx + self.offset + 1, doc.name)
 
     def download_prompt(self):
-        idx: int = self.session.prompt('Please choose a file to download: ',
-                                       key_bindings=self.bindings,
-                                       validator=NumberValidator(
-                                           self.offset + 1,
-                                           self.offset + self.num),
-                                       validate_while_typing=False,
-                                       enable_history_search=True)
-        if idx is not None:
-            Download(self.docs[int(idx) - self.offset - 1])
+        if self.total > 0:
+            idx: int = self.session.prompt('Please choose a file to download: ',
+                                           key_bindings=self.bindings,
+                                           validator=NumberValidator(
+                                               self.offset + 1,
+                                               self.offset + self.num),
+                                           validate_while_typing=False,
+                                           enable_history_search=True)
+            if idx is not None:
+                Download(self.docs[int(idx) - self.offset - 1])
+        else:
+            self.search_text = None
 
 
 class NumberValidator(Validator):
