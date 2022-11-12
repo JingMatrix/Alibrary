@@ -12,7 +12,7 @@ Search = importlib.import_module("redis-stubs.commands.search")
 
 class SearchPrompt:
     offset: int = 0
-    num: int = 10
+    num: int = 20
     total: int = 0
     index: Search = None
     session = PromptSession()
@@ -38,6 +38,7 @@ class SearchPrompt:
         def _(event):
             " Invoke new searches when `c-s` is pressed. "
             self.search_text = None
+            self.offset = 0
             event.app.exit()
 
         @self.bindings.add('c-d')
