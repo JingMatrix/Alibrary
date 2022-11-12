@@ -1,4 +1,4 @@
-#! python3
+#! /bin/env python3
 
 # Requirements:
 # 1. [aligo](https://github.com/foyoux/aligo), which is available on pypi.org
