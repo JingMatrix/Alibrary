@@ -16,7 +16,7 @@ This project _SHOULD_ reach the following goals:
 
 We use the following projects:
 1. [aligo](https://github.com/foyoux/aligo), `python3` API of aliyundrive,
-2. [redis](https://github.com/redis/redis) with [RedisSearch](https://github.com/RediSearch/RediSearch) [loaded](https://redis.io/docs/stack/search/quick_start/); alternatively, one can choose [redis-stack](https://redis.io/download/), database,
+2. [redis](https://github.com/redis/redis) with [RediSearch](https://github.com/RediSearch/RediSearch) [loaded](https://redis.io/docs/stack/search/quick_start/); alternatively, one can choose [redis-stack](https://redis.io/download/), database,
 3. [redis-om-python](https://github.com/redis/redis-om-python), `pthon3` API for `redis`,
 4. [python-prompt-toolkit](https://github.com/prompt-toolkit/python-prompt-toolkit), search prompt interface,
 5. [humanize](https://github.com/python-humanize/humanize), show file size,
