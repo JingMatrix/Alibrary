@@ -21,9 +21,8 @@ from prompt import SearchPrompt
 from migrator import Migrator
 from type import AliShareInfo
 from download import Download
+from datetime import datetime
 import logging
-
-download_dir = tempfile.gettempdir()
 
 # Call this script without arguments to login or persist login info
 if len(sys.argv) == 1:
@@ -31,6 +30,10 @@ if len(sys.argv) == 1:
     from aligo import Auth
     Auth(name='aligo')._refresh_token()
     sys.exit()
+
+# Use global variables to refresh share_token after each 30 mins
+update_interval = 30 * 60
+expired_time = datetime.now().timestamp() + update_interval
 
 
 def get_share_id(
@@ -43,16 +46,6 @@ def get_share_id(
         f.write(share_id)
         f.close()
         return share_id
-    # ###The follwoing code conficts with redis search API.###
-    # else:
-    #     if os.path.exists(share_id_data_file):
-    #         print('Reading share id from ' + share_id_data_file)
-    #         f = open(share_id_data_file, 'r')
-    #         share_id = f.read().strip()
-    #         f.close()
-    #     else:
-    #         print('No way to determinate share_id, exiting...')
-    #         exit()
 
 
 def get_file_id(share_id: str = None) -> str:
@@ -70,6 +63,12 @@ def record(share_info: AliShareInfo,
     if share_token is None:
         share_token: str = str(ali.get_share_token(share_info.share_id))
 
+    global expired_time
+    if datetime.now().timestamp() > expired_time:
+        expired_time = datetime.now().timestamp() + update_interval
+        record(share_info)
+        return
+
     if share_info.type == 'folder' and not redis_connection.sismember('aliyun-share:folder', share_info.file_id):
         file_list = ali.get_share_file_list(share_id=share_info.share_id,
                                             share_token=share_token,
@@ -79,7 +78,6 @@ def record(share_info: AliShareInfo,
         redis_connection.sadd('aliyun-share:folder', share_info.file_id)
     elif share_info.type == 'file' and not redis_connection.exists(share_info.key()):
         share_info.save()
-        # print('Index data saved as ', share_info.key())
 
 
 share_id = get_share_id()
@@ -93,8 +91,7 @@ if share_id:
                            share_token=str(share_token)))
     record(share_info)
     if share_info.type == 'file':
-        Download(share_info=share_info,
-                 download_dir=download_dir)
+        Download(share_info=share_info)
     else:
         Migrator().run()
         SearchPrompt(db=AliShareInfo.db())
