@@ -8,6 +8,7 @@ from prompt_toolkit.key_binding import KeyBindings
 from download import Download
 from humanize import naturalsize
 import importlib
+import re
 
 Search = importlib.import_module("redis-stubs.commands.search")
 
@@ -98,15 +99,16 @@ class SearchPrompt:
 
     def download_prompt(self):
         if self.total > 0:
-            idx: int = self.session.prompt('Please choose a file to download: ',
+            idx: str = self.session.prompt('Please choose files to download: ',
                                            key_bindings=self.bindings,
                                            validator=NumberValidator(
                                                self.offset + 1,
-                                               self.offset + self.num),
+                                               min(self.offset + self.num, self.total)),
                                            validate_while_typing=False,
                                            enable_history_search=True)
             if idx is not None:
-                Download(self.docs[int(idx) - self.offset - 1])
+                for id in parseRange(idx):
+                    Download(self.docs[id - self.offset - 1])
         else:
             self.search_text = None
 
@@ -122,10 +124,38 @@ class NumberValidator(Validator):
     def validate(self, document):
         text = document.text
 
-        if not text.isdigit():
+        if re.match("^[-0-9 ,<]*$", text) is None:
             raise ValidationError(
-                message='This input contains non-numeric characters')
-        elif int(text) > self.up_limit or int(text) < self.down_limit:
-            raise ValidationError(
-                message='The input index should be between ' +
-                str(self.down_limit) + ' and ' + str(self.up_limit) + '.')
+                message='This input contains non-numeric characters.')
+        else:
+            try:
+                ids = parseRange(text)
+            except ValueError:
+                raise ValidationError(
+                    message='Bad range syntax.')
+
+        for id in ids:
+            if id > self.up_limit or id < self.down_limit:
+                raise ValidationError(
+                    message=str(id) + " is not between " +
+                    str(self.down_limit) + ' and ' + str(self.up_limit) + '.')
+
+
+def parseRange(rng: str):
+    ids = set()
+    for x in rng.split(','):
+        x = x.strip()
+        if x.isdigit():
+            ids.add(int(x))
+            continue
+        if x[0] == '<':
+            for n in range(1, int(x[1:]) + 1):
+                ids.add(n)
+            continue
+        if '-' in x:
+            xr = [n.strip() for n in x.split('-')]
+            for n in range(int(xr[0]), int(xr[len(xr) - 1]) + 1):
+                ids.add(n)
+        else:
+            raise ValueError('Unknown range type: ', x)
+    return ids
