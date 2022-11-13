@@ -16,7 +16,7 @@ import re
 import sys
 import tempfile
 
-from aligo import Aligo, GetShareTokenResponse
+from aligo import Aligo
 from prompt import SearchPrompt
 from migrator import Migrator
 from type import AliShareInfo
@@ -64,16 +64,15 @@ def get_file_id(share_id: str = None) -> str:
 
 
 def record(share_info: AliShareInfo,
-           share_token: GetShareTokenResponse = None):
+           share_token: str = None):
     redis_connection = AliShareInfo.db()
     if redis_connection.exists(share_info.key()):
         return
 
     if share_token is None:
-        share_token = ali.get_share_token(get_share_id())
+        share_token: str = str(ali.get_share_token(share_info.share_id))
 
     if share_info.type == 'folder':
-        share_token = ali.get_share_token(get_share_id())
         file_list = ali.get_share_file_list(share_id=share_info.share_id,
                                             share_token=share_token,
                                             parent_file_id=share_info.file_id)
@@ -92,11 +91,10 @@ if share_id:
     share_info = AliShareInfo.strip(
         ali.get_share_file(share_id=share_id,
                            file_id=file_id,
-                           share_token=share_token))
-    record(share_info, share_token=share_token)
+                           share_token=str(share_token)))
+    record(share_info)
     if share_info.type == 'file':
         Download(share_info=share_info,
-                 share_token=share_token,
                  download_dir=download_dir)
     else:
         Migrator().run()

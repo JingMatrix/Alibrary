@@ -4,15 +4,15 @@
 import os
 import sys
 import tempfile
-from aligo import Aligo, GetShareTokenResponse
+from aligo import Aligo
 
 
 def Download(share_info: dict,
-             share_token: GetShareTokenResponse = None,
+             share_token: str = None,
              download_dir: str = tempfile.gettempdir()):
     ali = Aligo(use_aria2=True)
     if share_token is None:
-        share_token = ali.get_share_token(share_info.share_id)
+        share_token: str = str(ali.get_share_token(share_info.share_id))
 
     if len(sys.argv) > 2:
         download_path = os.path.expanduser(sys.argv[2])
