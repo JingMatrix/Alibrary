@@ -66,19 +66,18 @@ def get_file_id(share_id: str = None) -> str:
 def record(share_info: AliShareInfo,
            share_token: str = None):
     redis_connection = AliShareInfo.db()
-    if redis_connection.exists(share_info.key()):
-        return
 
     if share_token is None:
         share_token: str = str(ali.get_share_token(share_info.share_id))
 
-    if share_info.type == 'folder':
+    if share_info.type == 'folder' and not redis_connection.sismember('aliyun-share:folder', share_info.file_id):
         file_list = ali.get_share_file_list(share_id=share_info.share_id,
                                             share_token=share_token,
                                             parent_file_id=share_info.file_id)
         for file in file_list:
             record(AliShareInfo.strip(file), share_token=share_token)
-    elif share_info.type == 'file':
+        redis_connection.sadd('aliyun-share:folder', share_info.file_id)
+    elif share_info.type == 'file' and not redis_connection.exists(share_info.key()):
         share_info.save()
         # print('Index data saved as ', share_info.key())
 
