@@ -21,6 +21,7 @@ from prompt import SearchPrompt
 from migrator import Migrator
 from type import AliShareInfo
 from download import Download
+import logging
 
 download_dir = tempfile.gettempdir()
 
@@ -85,7 +86,7 @@ def record(share_info: AliShareInfo,
 
 share_id = get_share_id()
 if share_id:
-    ali = Aligo(use_aria2=True)
+    ali = Aligo(use_aria2=True, level=logging.ERROR)
     share_token = ali.get_share_token(share_id)
     file_id = get_file_id(share_id)
     share_info = AliShareInfo.strip(
