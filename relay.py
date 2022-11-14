@@ -4,7 +4,6 @@ from aligo import Aligo, BatchRequest, BatchSubRequest
 def Relay(file_id: str, share_id: str, relay_folder: str = None) -> str:
     print('Relaying file ', file_id)
     relay_folder = relay_folder or '637163bbabb15d41782d41f4bcda41a243107a89'
-    ali = CustomAligo()
 
     share_token = str(ali.get_share_token(share_id))
     relayed_files = ali.get_file_list(parent_file_id=relay_folder)
@@ -46,3 +45,6 @@ class CustomAligo(Aligo):
                                 }) for file_id in file_id_list
             ]), dict)
         return list(result)
+
+
+ali = CustomAligo()
