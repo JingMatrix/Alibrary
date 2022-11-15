@@ -1,0 +1,3 @@
+aligo==5.*
+flask==2.*
+functions-framework==3.*
