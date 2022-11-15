@@ -31,14 +31,12 @@ class SearchHanlder(BaseHTTPRequestHandler):
 
     def do_POST(self):
         length = int(self.headers.get('Content-Length'))
-        file_id = self.rfile.read(length).decode('utf-8')
-        hash = ':type.AliShareInfo:' + file_id
-        if AliShareInfo.db().exists(hash):
-            self.send_response(200)
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            share_id = AliShareInfo.db().hget(hash, 'share_id')
-            self.wfile.write(Relay(file_id=file_id, share_id=share_id).encode('utf-8'))
+        share_info = json.loads(self.rfile.read(length).decode('utf-8'))
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+        share_url = Relay(file_id=share_info['file_id'], share_id=share_info['share_id']) or 'Failed'
+        self.wfile.write(share_url.encode('utf-8'))
 
     def retrieve(self):
         if self.search_text is not None:
@@ -54,7 +52,7 @@ class SearchHanlder(BaseHTTPRequestHandler):
                     load_time = load_time + 1
                     sleep(self.load_wait)
             return json.dumps(
-                [{'name': doc.name, 'size': doc.size, 'file_id': doc.file_id}
+                [{'name': doc.name, 'size': doc.size, 'file_id': doc.file_id, 'share_id': doc.share_id}
                  for doc in results.docs]
             ).encode('utf-8')
 

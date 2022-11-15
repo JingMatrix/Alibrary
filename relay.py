@@ -1,4 +1,5 @@
 from aligo import Aligo, BatchRequest, BatchSubRequest
+import logging
 
 
 def Relay(file_id: str, share_id: str, relay_folder: str = None) -> str:
@@ -47,4 +48,4 @@ class CustomAligo(Aligo):
         return list(result)
 
 
-ali = CustomAligo()
+ali = CustomAligo(level=logging.ERROR)
