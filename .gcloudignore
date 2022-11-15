@@ -1,7 +1,10 @@
 .git
+.gitignore
 aliyun-share
 __pycache__
 *.md
 prompt.py
+download.py
 migrator.py
+relay
 LICENSE

@@ -7,7 +7,6 @@ from urllib.parse import unquote
 import json
 import importlib
 from time import sleep
-from relay import Relay
 
 Search = importlib.import_module("redis-stubs.commands.search")
 
@@ -28,15 +27,6 @@ class SearchHanlder(BaseHTTPRequestHandler):
         self.send_header('Content-Type', 'application/json')
         self.end_headers()
         self.wfile.write(self.retrieve())
-
-    def do_POST(self):
-        length = int(self.headers.get('Content-Length'))
-        share_info = json.loads(self.rfile.read(length).decode('utf-8'))
-        self.send_response(200)
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.end_headers()
-        share_url = Relay(file_id=share_info['file_id'], share_id=share_info['share_id']) or 'Failed'
-        self.wfile.write(share_url.encode('utf-8'))
 
     def retrieve(self):
         if self.search_text is not None:

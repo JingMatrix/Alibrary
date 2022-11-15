@@ -1,14 +1,12 @@
 FROM ubuntu
 RUN apt update
-COPY redis-tools.deb redis-server.deb /
-RUN apt install /redis-tools.deb /redis-server.deb -y
-RUN apt install python3 python3-pip -y
-RUN pip3 install aligo redis_om
-COPY archive.rdb redisearch-x64.so /
-COPY backend.py relay.py type.py /
-RUN mkdir -p $HOME/.aligo /home/.aligo
-COPY aligo.json /
-RUN cp /aligo.json $HOME/.aligo
-RUN cp /aligo.json /home/.aligo
+RUN apt install python3 python3-pip wget -y
+RUN pip3 install redis_om
+RUN wget -q 'http://mirrors.edge.kernel.org/ubuntu/pool/universe/r/redis/redis-server_7.0.4-1_amd64.deb'
+RUN wget -q 'http://mirrors.edge.kernel.org/ubuntu/pool/universe/r/redis/redis-tools_7.0.4-1_amd64.deb'
+RUN apt install /redis*.deb -y
+RUN wget -q 'https://github.com/JingMatrix/Alibrary/releases/download/v0.3/archive.rdb'
+RUN wget -q 'https://github.com/JingMatrix/Alibrary/releases/download/v0.2/redisearch-linux-x64.so'
+COPY search.py type.py /
 
-CMD redis-server --dir / --dbfilename archive.rdb --loadmodule /redisearch-x64.so --daemonize yes && python3 /backend.py
+CMD redis-server --dir / --dbfilename archive.rdb --loadmodule /redisearch-linux-x64.so --daemonize yes && python3 /search.py
