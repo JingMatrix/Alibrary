@@ -35,7 +35,7 @@ The following host demo sites are mirrors to each other:
 3. [on netlify.app](https://jianyu-ma.netlify.app/en/Alibrary),
 4. [on math.cnrs.fr](https://jianyu-ma.perso.math.cnrs.fr/en/Alibrary).
 
-Their dataset is the same, `archive.rdb` in [v0.2](https://github.com/JingMatrix/Alibrary/releases/tag/v0.2).
+Their datasets are the same, `archive.rdb` in [v0.2](https://github.com/JingMatrix/Alibrary/releases/tag/v0.2) and [v0.3](https://github.com/JingMatrix/Alibrary/releases/tag/v0.3).
 
 ## Usage
 
