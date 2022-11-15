@@ -5,7 +5,7 @@ Database toolkit for aliyundrive share links
 ## Goals
 
 Currently, many people share huge pack of files via [阿里云盘](https://www.aliyundrive.com/).
-For example, one can find such share links in [UP云搜](https://www.upyunso.com/), [万人迷吧](https://wanrenmi8.com/cn/index.html) and [云盘资源网](https://www.yunpanziyuan.com/).
+For example, one can find such share links in [UP云搜](https://www.upyunso.com/), [万人迷吧](https://wanrenmi8.com/cn/index.html), [找资源](https://zhaoziyuan.la/) and [云盘资源网](https://www.yunpanziyuan.com/).
 Given those abundant resources, we create [Alibrary](https://github.com/JingMatrix/Alibrary) project to index and update shared files.
 This project _SHOULD_ reach the following goals:
 1. store index data reliably;
@@ -26,6 +26,16 @@ We use the following projects:
 
 1. Index speed: 63886 indexes done in around 15 minutes (with the author's average internet connection).
 2. Index data size: 150644 indexes within size 34M.
+
+## Demo
+
+The following host demo sites are mirrors to each other:
+1. [on github.io](https://jingmatrix.github.io/en/Alibrary),
+2. [on onerender.com](https://jianyu-ma.onrender.com/en/Alibrary),
+3. [on netlify.app](https://jianyu-ma.netlify.app/en/Alibrary),
+4. [on math.cnrs.fr](https://jianyu-ma.perso.math.cnrs.fr/en/Alibrary).
+
+Their dataset is the same, `archive.rdb` in [v0.2](https://github.com/JingMatrix/Alibrary/releases/tag/v0.2).
 
 ## Usage
 
@@ -58,5 +68,5 @@ As for search syntax, please refer to the [official docs](https://redis.io/docs/
 - [x] Implement search API
 - [x] Add cli prompt interface
 - [x] Improve prompt interface
-- [ ] Run as cloud service
-- [ ] User-friendly front end for public usage
+- [x] Run as cloud service
+- [x] User-friendly front end for public usage

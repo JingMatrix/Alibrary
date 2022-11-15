@@ -74,8 +74,12 @@ def record(share_info: AliShareInfo,
                                             share_token=share_token,
                                             parent_file_id=share_info.file_id)
         for file in file_list:
-            record(AliShareInfo.strip(file), share_token=share_token)
+            try:
+                record(AliShareInfo.strip(file), share_token=share_token)
+            except AttributeError:
+                print(file)
         redis_connection.sadd('aliyun-share:folder', share_info.file_id)
+        print('Add folder ', share_info.name)
     elif share_info.type == 'file' and not redis_connection.exists(share_info.key()):
         share_info.save()
 
