@@ -1,0 +1,7 @@
+.git
+aliyun-share
+__pycache__
+*.md
+prompt.py
+migrator.py
+LICENSE
