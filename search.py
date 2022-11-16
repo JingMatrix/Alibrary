@@ -28,6 +28,19 @@ class SearchHanlder(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(self.retrieve())
 
+    def do_POST(self):
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+        if os.path.exists('./relay.py'):
+            from relay import Relay
+            length = int(self.headers.get('Content-Length'))
+            share_info = json.loads(self.rfile.read(length).decode('utf-8'))
+            share_url = Relay(file_id=share_info['file_id'], share_id=share_info['share_id']) or 'Failed'
+            self.wfile.write(share_url.encode('utf-8'))
+        else:
+            self.wfile.write('Failed'.encode('utf-8'))
+
     def retrieve(self):
         if self.search_text is not None:
             load_time = 0

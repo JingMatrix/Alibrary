@@ -6,5 +6,6 @@ __pycache__
 prompt.py
 download.py
 migrator.py
+relay.py
 relay
 LICENSE
