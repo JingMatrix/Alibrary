@@ -7,6 +7,7 @@ RUN wget -q 'http://mirrors.edge.kernel.org/ubuntu/pool/universe/r/redis/redis-t
 RUN apt install /redis*.deb -y
 RUN wget -q 'https://github.com/JingMatrix/Alibrary/releases/download/v0.3/archive.rdb'
 RUN wget -q 'https://github.com/JingMatrix/Alibrary/releases/download/v0.2/redisearch-linux-x64.so'
+RUN chmod +x /redisearch-linux-x64.so
 COPY search.py type.py /
 
-CMD redis-server --dir / --dbfilename archive.rdb --loadmodule /redisearch-linux-x64.so --daemonize yes && python3 /search.py
+CMD python3 /search.py

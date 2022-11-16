@@ -1,5 +1,5 @@
 from redis.commands.search.query import Query
-from redis.exceptions import BusyLoadingError
+from redis.exceptions import BusyLoadingError, ConnectionError
 from type import AliShareInfo
 import os
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -21,12 +21,16 @@ class SearchHanlder(BaseHTTPRequestHandler):
     search_text: str = ''
 
     def do_GET(self):
-        self.search_text = unquote(self.path.split('?')[1])
         self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Content-Type', 'application/json')
         self.end_headers()
-        self.wfile.write(self.retrieve())
+        path = self.path.split('?')
+        if len(path) == 2:
+            self.search_text = unquote(self.path.split('?')[1])
+            self.wfile.write(self.retrieve())
+        else:
+            self.wfile.write('{"erorr": "Invalid query format"}'.encode())
 
     def do_POST(self):
         self.send_response(200)
@@ -54,6 +58,10 @@ class SearchHanlder(BaseHTTPRequestHandler):
                     results = None
                     load_time = load_time + 1
                     sleep(self.load_wait)
+                except ConnectionError:
+                    # Only for debug purpose, get redis log from server
+                    os.system('redis-server --dir . --dbfilename archive.rdb --loadmodule ./redisearch-linux-x64.so')
+                    return
             return json.dumps(
                 [{'name': doc.name, 'size': doc.size, 'file_id': doc.file_id, 'share_id': doc.share_id}
                  for doc in results.docs]
@@ -65,5 +73,7 @@ def run(server_class=HTTPServer, handler_class=SearchHanlder):
     httpd = server_class(server_address, handler_class)
     httpd.serve_forever()
 
+
+os.system('redis-server --dir . --dbfilename archive.rdb --loadmodule ./redisearch-linux-x64.so --daemonize yes')
 
 run()
