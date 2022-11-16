@@ -28,8 +28,6 @@ class SearchHanlder(BaseHTTPRequestHandler):
         path = self.path.split('?')
         if len(path) == 2:
             self.search_text = unquote(self.path.split('?')[1])
-            # A bug for sometimes double url-encodeed query in Cyclic nodejs
-            self.search_text = unquote(self.search_text)
             self.wfile.write(self.retrieve())
         else:
             self.wfile.write('{"erorr": "Invalid query format"}'.encode())
