@@ -18,7 +18,6 @@ import tempfile
 
 from aligo import Aligo
 from prompt import SearchPrompt
-from migrator import Migrator
 from type import AliShareInfo
 from download import Download
 from datetime import datetime
@@ -34,6 +33,9 @@ if len(sys.argv) == 1:
 # Use global variables to refresh share_token after each 30 mins
 update_interval = 30 * 60
 expired_time = datetime.now().timestamp() + update_interval
+
+
+redis_connection = AliShareInfo.db
 
 
 def get_share_id(
@@ -58,7 +60,6 @@ def get_file_id(share_id: str = None) -> str:
 
 def record(share_info: AliShareInfo,
            share_token: str = None):
-    redis_connection = AliShareInfo.db()
 
     if share_token is None:
         share_token: str = str(ali.get_share_token(share_info.share_id))
@@ -75,7 +76,7 @@ def record(share_info: AliShareInfo,
                                             parent_file_id=share_info.file_id)
         for file in file_list:
             try:
-                record(AliShareInfo.strip(file), share_token=share_token)
+                record(AliShareInfo(file), share_token=share_token)
             except AttributeError:
                 print(file)
         redis_connection.sadd('aliyun-share:folder', share_info.file_id)
@@ -89,7 +90,7 @@ if share_id:
     ali = Aligo(use_aria2=True, level=logging.ERROR)
     share_token = ali.get_share_token(share_id)
     file_id = get_file_id(share_id)
-    share_info = AliShareInfo.strip(
+    share_info = AliShareInfo(
         ali.get_share_file(share_id=share_id,
                            file_id=file_id,
                            share_token=str(share_token)))
@@ -97,8 +98,7 @@ if share_id:
     if share_info.type == 'file':
         Download(share_info=share_info)
     else:
-        Migrator().run()
-        SearchPrompt(db=AliShareInfo.db())
+        share_info.index(share_id)
+        SearchPrompt(db=redis_connection)
 else:
-    Migrator().run()
-    SearchPrompt(db=AliShareInfo.db(), search_text=sys.argv[1])
+    SearchPrompt(db=redis_connection, search_text=sys.argv[1])

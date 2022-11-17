@@ -1,4 +1,5 @@
 from redis_om import redis
+from redis import Redis
 from redis.commands.search.query import Query
 from redis.commands.search.document import Document
 from prompt_toolkit import PromptSession, print_formatted_text as print, HTML
@@ -16,6 +17,7 @@ Search = importlib.import_module("redis-stubs.commands.search")
 class SearchPrompt:
     offset: int = 0
     num: int = 20
+    db: Redis = None
     total: int = 0
     index: Search = None
     session = PromptSession()
@@ -24,6 +26,8 @@ class SearchPrompt:
     bindings = KeyBindings()
 
     def __init__(self, db: redis.Redis, search_text: str = None):
+
+        self.db = db
 
         @self.bindings.add('c-n')
         def _(event):
@@ -57,7 +61,6 @@ class SearchPrompt:
         print(HTML('<u>Ctrl-N</u>: Next Page \t<u>Ctrl-P</u>: Previous Page'))
         print(HTML('<u>Ctrl-S</u>: New Search\t<u>Ctrl-D</u>: Exit'))
         self.search_text = search_text
-        self.index = db.ft(index_name=':type.AliShareInfo:index')
 
         while True:
             if self.search_text is None:
@@ -83,19 +86,22 @@ class SearchPrompt:
 
     def retrieve(self):
         if self.search_text is not None:
-            print('')
-            results = self.index.search(
-                Query(self.search_text).language('chinese').paging(
-                    self.offset, self.num))
-            self.docs = results.docs
-            self.total = results.total
-            print(
-                HTML('We have in total <b>' + str(self.total) +
-                     '</b> results'))
-            for idx, doc in enumerate(self.docs):
-                print(FormattedText([('#E9CD4C', str(idx + self.offset + 1).ljust(6)),
-                                     ('#2EA9DF', doc.name),
-                                     ('#707C74', '  ' + naturalsize(doc.size, binary=True))]))
+            self.total = 0
+            self.docs = []
+            for index in self.db.execute_command('ft._list'):
+                self.index = self.db.ft(index_name=index)
+                results = self.index.search(
+                    Query(self.search_text).language('chinese').paging(
+                        self.offset, self.num))
+                self.docs += results.docs
+                self.total += results.total
+                print(
+                    HTML('We have in total <b>' + str(self.total) +
+                         '</b> results'))
+        for idx, doc in enumerate(self.docs):
+            print(FormattedText([('#E9CD4C', str(idx + self.offset + 1).ljust(6)),
+                                 ('#2EA9DF', doc.n),
+                                 ('#707C74', '  ' + naturalsize(int(doc.s) * 1024, binary=True))]))
 
     def download_prompt(self):
         if self.total > 0:
@@ -108,7 +114,8 @@ class SearchPrompt:
                                            enable_history_search=True)
             if idx is not None:
                 for id in parseRange(idx):
-                    Download(self.docs[id - self.offset - 1])
+                    doc = self.docs[id - self.offset - 1]
+                    Download(share_index=doc.id, file_name=doc.n)
         else:
             self.search_text = None
 

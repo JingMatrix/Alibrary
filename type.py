@@ -1,19 +1,41 @@
-from redis_om import HashModel, Field
+from redis import Redis
 
 
-class AliShareInfo(HashModel):
+class AliShareInfo():
+    db: Redis = Redis(host="localhost", port=6379)
     share_id: str = None
-    file_extension: str = None
-    name: str = Field(index=True, full_text_search=True)
-    size: int = None
-    file_id: str = Field(primary_key=True)
+    name: str = None
+    size: int = 0
+    file_id: str = None
     type: str = None
 
-    @staticmethod
-    def strip(data: dict):
-        return AliShareInfo(share_id=data.share_id,
-                            file_id=data.file_id,
-                            name=data.name,
-                            size=data.size,
-                            file_extension=data.file_extension,
-                            type=data.type)
+    def __init__(self, data):
+        if type(data) is dict:
+            self.__dict__ = data
+        else:
+            self.file_id = data.file_id
+            self.share_id = data.share_id
+            self.name = data.name
+            self.size = data.size
+            self.type = data.type
+
+    def key(self):
+        return ':Ali:' + self.share_id + ':' + self.file_id
+
+    def save(self):
+        self.db.hset(self.key(), 'n', self.name)
+        self.db.hset(self.key(), 's', self.size // 1024)
+
+    def index(self, share_id: str = None):
+        if share_id is None:
+            share_id = self.share_id
+
+        cmd = 'FT.CREATE ' + share_id + ' '
+        cmd += 'ON HASH '
+        cmd += 'LANGUAGE chinese '
+        cmd += 'NOOFFSETS '
+        cmd += 'NOFIELDS '
+        cmd += 'NOFREQS '
+        cmd += 'PREFIX 1 ' + ':Ali:' + share_id + ': '
+        cmd += 'SCHEMA n TEXT'
+        self.db.execute_command(cmd)

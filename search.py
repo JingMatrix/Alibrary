@@ -1,3 +1,4 @@
+from redis import Redis
 from redis.commands.search.query import Query
 from redis.exceptions import BusyLoadingError, ConnectionError
 from type import AliShareInfo
@@ -17,8 +18,10 @@ class SearchHanlder(BaseHTTPRequestHandler):
     load_retry: int = 60
     load_wait: int = 2
     total: int = 0
-    index: Search = AliShareInfo.db().ft(index_name=':type.AliShareInfo:index')
+    db: Redis = AliShareInfo.db
+    index: Search = None
     search_text: str = ''
+    docs = []
 
     def do_GET(self):
         self.send_response(200)
@@ -48,23 +51,26 @@ class SearchHanlder(BaseHTTPRequestHandler):
     def retrieve(self):
         if self.search_text is not None:
             load_time = 0
-            results = None
-            while load_time < self.load_retry and results is None:
-                try:
-                    results = self.index.search(
-                        Query(self.search_text).language('chinese').paging(
-                            self.offset, self.num))
-                except BusyLoadingError:
-                    results = None
-                    load_time = load_time + 1
-                    sleep(self.load_wait)
-                except ConnectionError:
-                    # Only for debug purpose, get redis log from server
-                    os.system('redis-server --dir / --dbfilename archive.rdb --loadmodule /redisearch.so')
-                    return
+            for index in self.db.execute_command('ft._list'):
+                self.index = self.db.ft(index_name=index)
+                results = None
+                while load_time < self.load_retry and results is None:
+                    try:
+                        results = self.index.search(
+                            Query(self.search_text).language('chinese').paging(
+                                self.offset, self.num))
+                    except BusyLoadingError:
+                        results = None
+                        load_time = load_time + 1
+                        sleep(self.load_wait)
+                    except ConnectionError:
+                        # Only for debug purpose, get redis log from server
+                        os.system('redis-server --dir / --dbfilename archive.rdb --loadmodule /redisearch.so')
+                        return
+                self.docs += results.docs
             return json.dumps(
-                [{'name': doc.name, 'size': doc.size, 'file_id': doc.file_id, 'share_id': doc.share_id}
-                 for doc in results.docs]
+                [{'name': doc.n, 'size': int(doc.s) * 1024, 'file_id': doc.id.split(':')[3], 'share_id': doc.id.split(':')[2]}
+                 for doc in self.docs]
             ).encode('utf-8')
 
 
