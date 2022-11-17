@@ -12,7 +12,7 @@ from time import sleep
 
 class SearchHanlder(BaseHTTPRequestHandler):
     offset: int = 0
-    num: int = 200
+    num: int = 500
     load_retry: int = 60
     load_wait: int = 2
     total: int = 0
