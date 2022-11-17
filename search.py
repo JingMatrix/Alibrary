@@ -60,7 +60,7 @@ class SearchHanlder(BaseHTTPRequestHandler):
                     sleep(self.load_wait)
                 except ConnectionError:
                     # Only for debug purpose, get redis log from server
-                    os.system('redis-server --dir . --dbfilename archive.rdb --loadmodule ./redisearch-linux-x64.so')
+                    os.system('redis-server --dir / --dbfilename archive.rdb --loadmodule /redisearch.so')
                     return
             return json.dumps(
                 [{'name': doc.name, 'size': doc.size, 'file_id': doc.file_id, 'share_id': doc.share_id}
@@ -74,6 +74,6 @@ def run(server_class=HTTPServer, handler_class=SearchHanlder):
     httpd.serve_forever()
 
 
-os.system('redis-server --dir . --dbfilename archive.rdb --loadmodule ./redisearch-linux-x64.so --daemonize yes')
+os.system('redis-server --dir / --dbfilename archive.rdb --loadmodule /redisearch.so --daemonize yes')
 
 run()
