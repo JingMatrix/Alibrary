@@ -1,15 +1,13 @@
 from redis import Redis
-from redis.commands.search.query import Query
 from redis.exceptions import BusyLoadingError, ConnectionError
+from redis.commands.search import Search
+from redis.commands.search.query import Query
 from type import AliShareInfo
 import os
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import unquote
 import json
-import importlib
 from time import sleep
-
-Search = importlib.import_module("redis-stubs.commands.search")
 
 
 class SearchHanlder(BaseHTTPRequestHandler):
@@ -50,28 +48,29 @@ class SearchHanlder(BaseHTTPRequestHandler):
 
     def retrieve(self):
         if self.search_text is not None:
+            self.docs = []
             load_time = 0
-            for index in self.db.execute_command('ft._list'):
-                self.index = self.db.ft(index_name=index)
-                results = None
-                while load_time < self.load_retry and results is None:
-                    try:
+            results = None
+            while load_time < self.load_retry and results is None:
+                try:
+                    for index in self.db.execute_command('ft._list'):
+                        self.index = self.db.ft(index_name=index)
                         results = self.index.search(
                             Query(self.search_text).language('chinese').paging(
                                 self.offset, self.num))
-                    except BusyLoadingError:
-                        results = None
-                        load_time = load_time + 1
-                        sleep(self.load_wait)
-                    except ConnectionError:
-                        # Only for debug purpose, get redis log from server
-                        os.system('redis-server --dir / --dbfilename archive.rdb --loadmodule /redisearch.so')
-                        return
-                self.docs += results.docs
-            return json.dumps(
-                [{'name': doc.n, 'size': int(doc.s) * 1024, 'file_id': doc.id.split(':')[3], 'share_id': doc.id.split(':')[2]}
-                 for doc in self.docs]
-            ).encode('utf-8')
+                        self.docs += results.docs
+                except BusyLoadingError:
+                    results = None
+                    load_time = load_time + 1
+                    sleep(self.load_wait)
+                except ConnectionError:
+                    # Only for debug purpose, get redis log from server
+                    os.system('redis-server --dir / --dbfilename archive.rdb --loadmodule /redisearch.so')
+                    return
+        return json.dumps(
+            [{'name': doc.n, 'size': int(doc.s) * 1024, 'file_id': doc.id.split(':')[3], 'share_id': doc.id.split(':')[2]}
+             for doc in self.docs]
+        ).encode('utf-8')
 
 
 def run(server_class=HTTPServer, handler_class=SearchHanlder):
