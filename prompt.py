@@ -1,4 +1,3 @@
-from redis_om import redis
 from redis import Redis
 from redis.commands.search.query import Query
 from redis.commands.search.document import Document
@@ -25,7 +24,7 @@ class SearchPrompt:
     search_text: str = ''
     bindings = KeyBindings()
 
-    def __init__(self, db: redis.Redis, search_text: str = None):
+    def __init__(self, db: Redis, search_text: str = None):
 
         self.db = db
 
