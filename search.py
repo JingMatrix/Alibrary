@@ -1,3 +1,4 @@
+#! /bin/python3
 from redis import Redis
 from redis.exceptions import BusyLoadingError, ConnectionError
 from redis.commands.search import Search
@@ -8,6 +9,11 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import unquote
 import json
 from time import sleep
+
+aligo_relay = False
+if os.path.exists(os.path.dirname(os.path.realpath(__file__)) + '/relay.py'):
+    from relay import Relay
+    aligo_relay = True
 
 
 class SearchHanlder(BaseHTTPRequestHandler):
@@ -37,8 +43,7 @@ class SearchHanlder(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
-        if os.path.exists('./relay.py'):
-            from relay import Relay
+        if aligo_relay:
             length = int(self.headers.get('Content-Length'))
             share_info = json.loads(self.rfile.read(length).decode('utf-8'))
             share_url = Relay(file_id=share_info['file_id'], share_id=share_info['share_id']) or 'Failed'
