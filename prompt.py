@@ -1,4 +1,5 @@
 from redis import Redis
+from redis.commands.search import Search
 from redis.commands.search.query import Query
 from redis.commands.search.document import Document
 from prompt_toolkit import PromptSession, print_formatted_text as print, HTML
@@ -7,10 +8,7 @@ from prompt_toolkit.validation import Validator, ValidationError, DummyValidator
 from prompt_toolkit.key_binding import KeyBindings
 from download import Download
 from humanize import naturalsize
-import importlib
 import re
-
-Search = importlib.import_module("redis-stubs.commands.search")
 
 
 class SearchPrompt:
