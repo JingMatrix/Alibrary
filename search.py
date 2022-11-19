@@ -1,29 +1,16 @@
 #! /bin/python3
-from redis import Redis
-from redis.exceptions import BusyLoadingError, ConnectionError
-from redis.commands.search import Search
-from redis.commands.search.query import Query
-from type import AliShareInfo
+from psycopg2 import connect
 import os
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import unquote
 import json
-from time import sleep
-
-aligo_relay = False
-if os.path.exists(os.path.dirname(os.path.realpath(__file__)) + '/relay.py'):
-    from relay import Relay
-    aligo_relay = True
 
 
 class SearchHanlder(BaseHTTPRequestHandler):
     offset: int = 0
-    num: int = 500
-    load_retry: int = 60
-    load_wait: int = 2
+    limit: int = 500
     total: int = 0
-    db: Redis = AliShareInfo.db
-    index: Search = None
+    db = connect("port=5433 dbname=alibrary").cursor()
     search_text: str = ''
     docs = []
 
@@ -39,41 +26,13 @@ class SearchHanlder(BaseHTTPRequestHandler):
         else:
             self.wfile.write('{"erorr": "Invalid query format"}'.encode())
 
-    def do_POST(self):
-        self.send_response(200)
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.end_headers()
-        if aligo_relay:
-            length = int(self.headers.get('Content-Length'))
-            share_info = json.loads(self.rfile.read(length).decode('utf-8'))
-            share_url = Relay(file_id=share_info['file_id'], share_id=share_info['share_id']) or 'Failed'
-            self.wfile.write(share_url.encode('utf-8'))
-        else:
-            self.wfile.write('Failed'.encode('utf-8'))
-
     def retrieve(self):
         if self.search_text is not None:
             self.docs = []
-            load_time = 0
-            results = None
-            while load_time < self.load_retry and results is None:
-                try:
-                    for index in self.db.execute_command('ft._list'):
-                        self.index = self.db.ft(index_name=index)
-                        results = self.index.search(
-                            Query(self.search_text).language('chinese').paging(
-                                self.offset, self.num))
-                        self.docs += results.docs
-                except BusyLoadingError:
-                    results = None
-                    load_time = load_time + 1
-                    sleep(self.load_wait)
-                except ConnectionError:
-                    # Only for debug purpose, get redis log from server
-                    os.system('redis-server --dir / --dbfilename archive.rdb --loadmodule /redisearch.so')
-                    return
+            self.db.execute("SELECT id,name,size FROM record WHERE tsv @@ to_tsquery('jiebacfg', %s) LIMIT %s;", (self.search_text, self.limit))
+            self.docs = self.db.fetchall()
         return json.dumps(
-            [{'name': doc.n, 'size': int(doc.s) * 1024, 'file_id': doc.id.split(':')[3], 'share_id': doc.id.split(':')[2]}
+            [{'name': doc[1], 'size': int(doc[2]) * 1024, 'file_id': doc[0].split(':')[0], 'share_id': doc[0].split(':')[1]}
              for doc in self.docs]
         ).encode('utf-8')
 
@@ -83,7 +42,5 @@ def run(server_class=HTTPServer, handler_class=SearchHanlder):
     httpd = server_class(server_address, handler_class)
     httpd.serve_forever()
 
-
-os.system('redis-server --dir / --dbfilename archive.rdb --loadmodule /redisearch.so --daemonize yes')
 
 run()

@@ -101,4 +101,4 @@ if share_id:
         share_info.index(share_id)
         SearchPrompt(db=redis_connection)
 else:
-    SearchPrompt(db=redis_connection, search_text=sys.argv[1])
+    SearchPrompt(search_text=sys.argv[1])

@@ -1,7 +1,4 @@
-from redis import Redis
-from redis.commands.search import Search
-from redis.commands.search.query import Query
-from redis.commands.search.document import Document
+from psycopg2 import connect
 from prompt_toolkit import PromptSession, print_formatted_text as print, HTML
 from prompt_toolkit.formatted_text import FormattedText
 from prompt_toolkit.validation import Validator, ValidationError, DummyValidator
@@ -14,28 +11,28 @@ import re
 class SearchPrompt:
     offset: int = 0
     num: int = 20
-    db: Redis = None
+    db = connect("port=5433 dbname=alibrary").cursor()
     total: int = 0
-    index: Search = None
+    limit: int = 300
+    skip: bool = False
     session = PromptSession()
-    docs: [Document] = []
     search_text: str = ''
+    docs = []
     bindings = KeyBindings()
 
-    def __init__(self, db: Redis, search_text: str = None):
-
-        self.db = db
+    def __init__(self, search_text: str = None):
 
         @self.bindings.add('c-n')
         def _(event):
             " Show the next page when `c-n` is pressed. "
-            self.offset = min(self.offset + self.num, self.total - 1)
+            self.skip = True
             self.retrieve()
 
         @self.bindings.add('c-p')
         def _(event):
             " Show the previous page when `c-p` is pressed. "
-            self.offset = max(self.offset - self.num, 0)
+            self.skip = True
+            self.offset = max(self.offset - 2 * self.num, 0)
             self.retrieve()
 
         @self.bindings.add('c-s')
@@ -61,6 +58,7 @@ class SearchPrompt:
 
         while True:
             if self.search_text is None:
+                self.skip = False
                 self.search_prompt()
             else:
                 self.retrieve()
@@ -82,37 +80,31 @@ class SearchPrompt:
             enable_history_search=True)
 
     def retrieve(self):
-        if self.search_text is not None:
-            self.total = 0
-            self.docs = []
-            for index in self.db.execute_command('ft._list'):
-                self.index = self.db.ft(index_name=index)
-                results = self.index.search(
-                    Query(self.search_text).language('chinese').paging(
-                        self.offset, self.num))
-                self.docs += results.docs
-                self.total += results.total
-                print(
-                    HTML('We have in total <b>' + str(self.total) +
-                         '</b> results'))
-        for idx, doc in enumerate(self.docs):
-            print(FormattedText([('#E9CD4C', str(idx + self.offset + 1).ljust(6)),
-                                 ('#2EA9DF', doc.n),
-                                 ('#707C74', '  ' + naturalsize(int(doc.s) * 1024, binary=True))]))
+        print('')
+        if self.search_text is not None and not self.skip:
+            self.offset = 0
+            self.db.execute("SELECT id,name,size FROM record WHERE tsv @@ to_tsquery('jiebacfg', %s) LIMIT %s;", (self.search_text, self.limit))
+            self.docs = self.db.fetchall()
+            self.total = len(self.docs)
+        HTML('We have in total <b>' + str(len(self.docs)) + '</b> results')
+        start_idx = self.offset
+        for idx in range(start_idx, min(self.total, self.num + start_idx)):
+            print(FormattedText([('#E9CD4C', str(self.offset + 1).ljust(6)),
+                                 ('#2EA9DF', self.docs[self.offset][1]),
+                                 ('#707C74', '  ' + naturalsize(int(self.docs[self.offset][2]) * 1024, binary=True))]))
+            self.offset += 1
 
     def download_prompt(self):
         if self.total > 0:
             idx: str = self.session.prompt('Please choose files to download: ',
                                            key_bindings=self.bindings,
-                                           validator=NumberValidator(
-                                               self.offset + 1,
-                                               min(self.offset + self.num, self.total)),
+                                           validator=NumberValidator(self.total),
                                            validate_while_typing=False,
                                            enable_history_search=True)
             if idx is not None:
                 for id in parseRange(idx):
-                    doc = self.docs[id - self.offset - 1]
-                    Download(share_index=doc.id, file_name=doc.n)
+                    doc = self.docs[id - 1]
+                    Download(share_index=doc[0], file_name=doc[1])
         else:
             self.search_text = None
 
@@ -121,7 +113,7 @@ class NumberValidator(Validator):
     up_limit: int = 0
     down_limit: int = 0
 
-    def __init__(self, down_limit: int, up_limit: int):
+    def __init__(self, up_limit: int, down_limit: int = 0):
         self.up_limit = up_limit
         self.down_limit = down_limit
 

@@ -13,7 +13,7 @@ def Download(share_index: str,
              download_dir: str = tempfile.gettempdir()):
     ali = Aligo(use_aria2=True)
     share_data = share_index.split(':')
-    share_info = {"share_id": share_data[2], "file_id": share_data[3]}
+    share_info = {"share_id": share_data[0], "file_id": share_data[1]}
     if share_token is None:
         share_token: str = str(ali.get_share_token(share_info["share_id"]))
 
