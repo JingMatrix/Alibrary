@@ -16,16 +16,12 @@ This project _SHOULD_ reach the following goals:
 
 We use the following projects:
 1. [aligo](https://github.com/foyoux/aligo), `python3` API of aliyundrive,
-2. [redis](https://github.com/redis/redis) with [RediSearch](https://github.com/RediSearch/RediSearch) [loaded](https://redis.io/docs/stack/search/quick_start/); alternatively, one can choose [redis-stack](https://redis.io/download/), database,
-3. [redis-om-python](https://github.com/redis/redis-om-python), `pthon3` API for `redis`,
+2. [PostgreSQL](https://www.postgresql.org/) with full-text search extension [pg_jieba](https://github.com/JingMatrix/pg_jieba), database storage with Chinese segemntation,
+3. [psycopg2](https://www.psycopg.org/), `pthon3` API for `PostgreSQL`,
 4. [python-prompt-toolkit](https://github.com/prompt-toolkit/python-prompt-toolkit), search prompt interface,
 5. [humanize](https://github.com/python-humanize/humanize), show file size,
 6. [aria2](https://github.com/aria2/aria2), optional download utility.
 
-## Performance
-
-1. Index speed: 63886 indexes done in around 15 minutes (with the author's average internet connection).
-2. Index data size: 150644 indexes within size 34M.
 
 ## Demo
 
@@ -35,32 +31,17 @@ The following host demo sites are mirrors to each other:
 3. [on netlify.app](https://jianyu-ma.netlify.app/en/Alibrary),
 4. [on math.cnrs.fr](https://jianyu-ma.perso.math.cnrs.fr/en/Alibrary).
 
-Their datasets are the same, `archive.rdb` in [v0.2](https://github.com/JingMatrix/Alibrary/releases/tag/v0.2) and [v0.3](https://github.com/JingMatrix/Alibrary/releases/tag/v0.3).
+Their datasets are the same, `alibrary.sql` in [v2.0](https://github.com/JingMatrix/Alibrary/releases/tag/v2.0).
 
 ## Usage
 
-To begin with, you can download `archive.rdb` in the [release page](https://github.com/JingMatrix/Alibrary/releases) as sample dataset.
-Our database `archive.rdb` includes all indexes from [well-chosen share links](share_urls.md),
-and it contains 150644 records of e-books.
+To begin with, you can download `alibrary.sql` in the [release page](https://github.com/JingMatrix/Alibrary/releases) as a sample dataset and load it into `PostgresSQL`.
+To load it, you must have the `pg_jieba` extension installed.
+This sample includes 552,544 records without duplications.
 
-The next step is to start the redis-sever:
-```sh
-redis-server --dir . --dbfilename archive.rdb --loadmodule /path/to/redisearch.so
-
-```
-The module `redisearch.so` above should be compiled on your OS.
-Complied binaries from `Android arm64` and `Linux amd64` could be found in the [release page](https://github.com/JingMatrix/Alibrary/releases/tag/v0.2).
-
-If you don't want to compile it, please download and use `redis-stack` instead:
-```sh
-redis-stack-server --dir . --dbfilename archive.rdb
-```
-If your `redis-server` or `redis-stack-sever` is already running, please stop it first.
-Please notice that our `archive.rdb` requires `redis-sever` with version higher than `v7.0`.
-
-Finally, you can search indexes in our sample database or index your costume share links using [aliyun-share](aliyun-share),
-see comments inside it for details.
-As for search syntax, please refer to the [official docs](https://redis.io/docs/stack/search/reference/query_syntax/).
+After this, you can search indexes in our sample database or index your costume share links using [aliyun-share](aliyun-share),
+see comments inside it for usage details.
+As for search syntax, please refer to the [tsquery](https://www.postgresql.org/docs/current/datatype-textsearch.html#DATATYPE-TSQUERY).
 
 ## Development plans
 
@@ -70,3 +51,4 @@ As for search syntax, please refer to the [official docs](https://redis.io/docs/
 - [x] Improve prompt interface
 - [x] Run as cloud service
 - [x] User-friendly front end for public usage
+- [x] Migrate database to `PostgresSQL`
