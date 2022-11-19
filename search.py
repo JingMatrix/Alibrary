@@ -6,6 +6,11 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import unquote
 import json
 
+aligo_relay = False
+if os.path.exists(os.path.dirname(os.path.realpath(__file__)) + '/relay.py'):
+    from relay import Relay
+    aligo_relay = True
+
 
 class SearchHanlder(BaseHTTPRequestHandler):
     offset: int = 0
@@ -29,6 +34,18 @@ class SearchHanlder(BaseHTTPRequestHandler):
         self.send_header('Content-Type', 'application/json')
         self.end_headers()
         self.wfile.write(self.result)
+
+    def do_POST(self):
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+        if aligo_relay:
+            length = int(self.headers.get('Content-Length'))
+            share_info = json.loads(self.rfile.read(length).decode('utf-8'))
+            share_url = Relay(file_id=share_info['file_id'], share_id=share_info['share_id']) or 'Failed'
+            self.wfile.write(share_url.encode('utf-8'))
+        else:
+            self.wfile.write('Failed'.encode('utf-8'))
 
     def retrieve(self):
         if self.search_text is not None:
