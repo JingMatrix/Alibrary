@@ -11,7 +11,7 @@ import re
 class SearchPrompt:
     offset: int = 0
     num: int = 20
-    db = connect("port=5433 dbname=alibrary").cursor()
+    db = connect("dbname=alibrary").cursor()
     total: int = 0
     limit: int = 300
     skip: bool = False
@@ -48,12 +48,7 @@ class SearchPrompt:
             event.app.exit()
             self.session = None
 
-        print(
-            HTML(
-                'Gald to see you here! We offer the following keyboard shortcuts:'
-            ))
-        print(HTML('<u>Ctrl-N</u>: Next Page \t<u>Ctrl-P</u>: Previous Page'))
-        print(HTML('<u>Ctrl-S</u>: New Search\t<u>Ctrl-D</u>: Exit'))
+        self.welcome()
         self.search_text = search_text
 
         while True:
@@ -72,6 +67,14 @@ class SearchPrompt:
                 "Goodbye! You can always invoke new searches using <i>python3 aliyun_share SEARCHTEXT</i>."
             ))
 
+    def welcome(self):
+        print(
+            HTML(
+                'Gald to see you here! We offer the following keyboard shortcuts:'
+            ))
+        print(HTML('<u>Ctrl-N</u>: Next Page \t<u>Ctrl-P</u>: Previous Page'))
+        print(HTML('<u>Ctrl-S</u>: New Search\t<u>Ctrl-D</u>: Exit'))
+
     def search_prompt(self):
         self.search_text = self.session.prompt(
             'Please enter a string to invoke search: ',
@@ -86,7 +89,7 @@ class SearchPrompt:
             self.db.execute("SELECT id,name,size FROM record WHERE tsv @@ to_tsquery('jiebacfg', %s) LIMIT %s;", (self.search_text, self.limit))
             self.docs = self.db.fetchall()
             self.total = len(self.docs)
-        HTML('We have in total <b>' + str(len(self.docs)) + '</b> results')
+        print(HTML('We have in total <b>' + str(len(self.docs)) + '</b> results'))
         start_idx = self.offset
         for idx in range(start_idx, min(self.total, self.num + start_idx)):
             print(FormattedText([('#E9CD4C', str(self.offset + 1).ljust(6)),
@@ -119,6 +122,9 @@ class NumberValidator(Validator):
 
     def validate(self, document):
         text = document.text
+        if text == '':
+            raise ValidationError(
+                message='No input, you might want to use the shortcuts.')
 
         if re.match("^[-0-9 ,<]*$", text) is None:
             raise ValidationError(

@@ -17,8 +17,7 @@ import sys
 import tempfile
 
 from aligo import Aligo
-from prompt import SearchPrompt
-from type import AliShareInfo
+import psycopg2
 from download import Download
 from datetime import datetime
 import logging
@@ -35,7 +34,8 @@ update_interval = 30 * 60
 expired_time = datetime.now().timestamp() + update_interval
 
 
-redis_connection = AliShareInfo.db
+conn = psycopg2.connect("dbname=alibrary")
+cur = conn.cursor()
 
 
 def get_share_id(
@@ -58,7 +58,7 @@ def get_file_id(share_id: str = None) -> str:
         return ali.get_share_info(share_id=share_id).file_infos[0].file_id
 
 
-def record(share_info: AliShareInfo,
+def record(share_info,
            share_token: str = None):
 
     if share_token is None:
@@ -70,35 +70,46 @@ def record(share_info: AliShareInfo,
         record(share_info)
         return
 
-    if share_info.type == 'folder' and not redis_connection.sismember('aliyun-share:folder', share_info.file_id):
+    if share_info.type == 'folder':
+        cur.execute("SELECT EXISTS(SELECT 1 FROM folder WHERE id = %s) LIMIT 1;", (share_info.file_id,))
+        if cur.fetchone()[0]:
+            print("Folder", share_info.name, "already in the database")
+            return
         file_list = ali.get_share_file_list(share_id=share_info.share_id,
                                             share_token=share_token,
                                             parent_file_id=share_info.file_id)
         for file in file_list:
             try:
-                record(AliShareInfo(file), share_token=share_token)
+                record(file, share_token=share_token)
             except AttributeError:
                 print(file)
-        redis_connection.sadd('aliyun-share:folder', share_info.file_id)
+        cur.execute("INSERT INTO folder (id) VALUES (%s);", (share_info.file_id,))
         print('Add folder ', share_info.name)
-    elif share_info.type == 'file' and not redis_connection.exists(share_info.key()):
-        share_info.save()
+    elif share_info.type == 'file':
+        id = share_info.share_id + ':' + share_info.file_id
+        cur.execute("SELECT EXISTS(SELECT 1 FROM record WHERE id = %s) LIMIT 1;", (share_info.file_id,))
+        if cur.fetchone()[0]:
+            cur.execute("INSERT INTO record (id, name, size) VALUES (%s, %s, %s);",
+                        (id, share_info.name, share_info.size // 1024))
 
 
 share_id = get_share_id()
 if share_id:
-    ali = Aligo(use_aria2=True, level=logging.ERROR)
+    ali = Aligo(level=logging.ERROR)
     share_token = ali.get_share_token(share_id)
     file_id = get_file_id(share_id)
-    share_info = AliShareInfo(
-        ali.get_share_file(share_id=share_id,
-                           file_id=file_id,
-                           share_token=str(share_token)))
+    share_info = ali.get_share_file(share_id=share_id,
+                                    file_id=file_id,
+                                    share_token=str(share_token))
     record(share_info)
+    conn.commit()
+    cur.close()
+    conn.close()
     if share_info.type == 'file':
         Download(share_info=share_info)
     else:
-        share_info.index(share_id)
-        SearchPrompt(db=redis_connection)
+        from prompt import SearchPrompt
+        SearchPrompt()
 else:
+    from prompt import SearchPrompt
     SearchPrompt(search_text=sys.argv[1])
