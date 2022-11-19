@@ -36,16 +36,36 @@ class SearchHanlder(BaseHTTPRequestHandler):
         self.wfile.write(self.result)
 
     def do_POST(self):
-        self.send_response(200)
+        self.protocol_version = 'HTTP/1.1'
+        if aligo_relay:
+            share_url = None
+            share_info = None
+            self.result = None
+            length = int(self.headers.get('Content-Length'))
+            try:
+                share_info = json.loads(self.rfile.read(length).decode('utf-8'))
+            except json.decoder.JSONDecodeError:
+                self.send_response(400)
+                self.result = 'Failed: Invalid POST payload'.encode()
+            if share_info is not None:
+                try:
+                    share_url = Relay(file_id=share_info['file_id'], share_id=share_info['share_id'])
+                except KeyError as e:
+                    self.send_response(400)
+                    self.result = ('Failed: JSON POST payload require field ' + str(e)).encode()
+                except AttributeError:
+                    self.send_response(501)
+                    self.result = 'Failed: Relaying share link fails'.encode()
+
+                if self.result is None and share_url is not None:
+                    self.result = share_url.encode()
+                    self.send_response(200)
+        else:
+            self.send_response(501)
+            self.result = 'Failed: Relay Module Not Found'.encode()
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
-        if aligo_relay:
-            length = int(self.headers.get('Content-Length'))
-            share_info = json.loads(self.rfile.read(length).decode('utf-8'))
-            share_url = Relay(file_id=share_info['file_id'], share_id=share_info['share_id']) or 'Failed'
-            self.wfile.write(share_url.encode('utf-8'))
-        else:
-            self.wfile.write('Failed'.encode('utf-8'))
+        self.wfile.write(self.result)
 
     def retrieve(self):
         if self.search_text is not None:

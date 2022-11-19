@@ -3,7 +3,7 @@ import logging
 
 
 def Relay(file_id: str, share_id: str, relay_folder: str = None) -> str:
-    print('Relaying file ', file_id)
+    print('Relaying file ', share_id + ':' + file_id)
     relay_folder = relay_folder or '637163bbabb15d41782d41f4bcda41a243107a89'
 
     share_token = str(ali.get_share_token(share_id))
