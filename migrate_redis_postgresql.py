@@ -4,7 +4,7 @@ from redis import Redis
 
 # Connect to dbs
 rdb = Redis(host="localhost", port=6379)
-conn = psycopg2.connect("port=5433 dbname=alibrary")
+conn = psycopg2.connect("dbname=alibrary")
 cur = conn.cursor()
 
 keys = rdb.keys(':Ali:*')

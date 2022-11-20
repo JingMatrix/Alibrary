@@ -1,6 +1,6 @@
 #! /bin/python3
 from psycopg2 import connect
-from psycopg2.errors import SyntaxError
+from psycopg2.errors import SyntaxError, InFailedSqlTransaction
 import os
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import unquote
@@ -11,12 +11,14 @@ if os.path.exists(os.path.dirname(os.path.realpath(__file__)) + '/relay.py'):
     from relay import Relay
     aligo_relay = True
 
+conn = connect("dbname=alibrary")
+
 
 class SearchHanlder(BaseHTTPRequestHandler):
     offset: int = 0
     limit: int = 500
     total: int = 0
-    db = connect("dbname=alibrary").cursor()
+    db = conn.cursor()
     search_text: str = ''
     sql: str = "SELECT id,name,size FROM record WHERE tsv @@ to_tsquery('jiebacfg', %s) LIMIT %s;"
     docs = []
@@ -73,11 +75,13 @@ class SearchHanlder(BaseHTTPRequestHandler):
             if ' ' in self.search_text and '&' not in self.search_text and '|' not in self.search_text and '<->' not in self.search_text and '!' not in self.search_text:
                 self.search_text = ' & '.join(self.search_text.split())
             try:
-                self.db.execute(self.sql, (self.search_text, self.limit))
-            except SyntaxError as e:
+                self.db.execute("SELECT * FROM to_tsquery('jiebacfg', %s)", (self.search_text,))
+            except (SyntaxError, InFailedSqlTransaction) as e:
                 self.send_response(400)
+                conn.rollback()
                 return json.dumps({"error": str(e).strip()}).encode()
 
+            self.db.execute(self.sql, (self.search_text, self.limit))
             self.docs = self.db.fetchall()
         self.send_response(200)
         return json.dumps([{
