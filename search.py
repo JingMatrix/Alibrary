@@ -2,15 +2,17 @@
 from psycopg2 import connect
 from psycopg2.errors import SyntaxError, InFailedSqlTransaction
 import os
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import HTTPServer, BaseHTTPRequestHandler, HTTPStatus
 from urllib.parse import unquote
 import json
+import logging
 
 aligo_relay = False
 if os.path.exists(os.path.dirname(os.path.realpath(__file__)) + '/relay.py'):
     from relay import Relay
     aligo_relay = True
 
+logging.basicConfig(filename='alibrary.log', level=logging.ERROR, format='%(message)s')
 conn = connect("dbname=alibrary")
 
 
@@ -24,7 +26,45 @@ class SearchHanlder(BaseHTTPRequestHandler):
     docs = []
     result = '{"erorr": "Invalid query format"}'.encode()
 
-    def do_GET(self):
+    def error_LOG(self):
+        self.close_connection = True
+        logging.error("Unwanted request from: {}\n{} {} {}\n{}".
+                      format(self.client_address,
+                             self.command,
+                             self.path,
+                             self.request_version,
+                             self.headers))
+
+    def handle_one_request(self):
+        try:
+            self.raw_requestline = self.rfile.readline(65537)
+            if len(self.raw_requestline) > 65536:
+                self.requestline = ''
+                self.request_version = ''
+                self.command = ''
+                self.send_error(HTTPStatus.REQUEST_URI_TOO_LONG)
+                return
+            if not self.raw_requestline:
+                self.close_connection = True
+                return
+            if not self.parse_request():
+                self.error_LOG()
+                # An error code has been sent, just exit
+                return
+            mname = 'do_' + self.command
+            if not hasattr(self, mname):
+                self.error_LOG()
+                return
+            method = getattr(self, mname)
+            method()
+            self.wfile.flush()  # actually send the response if not already done.
+        except TimeoutError as e:
+            # a read or a write timed out.  Discard this connection
+            self.log_error("Request timed out: %r", e)
+            self.close_connection = True
+            return
+
+    def do_SEARCH(self):
         self.protocol_version = 'HTTP/1.1'
         path = self.path.split('?')
         if len(path) == 2:
@@ -37,7 +77,7 @@ class SearchHanlder(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(self.result)
 
-    def do_POST(self):
+    def do_RELAY(self):
         self.protocol_version = 'HTTP/1.1'
         if aligo_relay:
             share_url = None
