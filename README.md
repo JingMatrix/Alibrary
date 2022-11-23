@@ -52,3 +52,4 @@ As for search syntax, please refer to the [tsquery](https://www.postgresql.org/d
 - [x] Run as cloud service
 - [x] User-friendly front end for public usage
 - [x] Migrate database to `PostgresSQL`
+- [ ] Add more resource categories

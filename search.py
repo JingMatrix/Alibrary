@@ -1,11 +1,13 @@
 #! /bin/python3
 from psycopg2 import connect
+from psycopg2.sql import SQL, Identifier
 from psycopg2.errors import SyntaxError, InFailedSqlTransaction
 import os
 from http.server import HTTPServer, BaseHTTPRequestHandler, HTTPStatus
 from urllib.parse import unquote
 import json
 import logging
+from type import CATEGORIES
 
 aligo_relay = False
 if os.path.exists(os.path.dirname(os.path.realpath(__file__)) + '/relay.py'):
@@ -21,8 +23,9 @@ class SearchHanlder(BaseHTTPRequestHandler):
     limit: int = 500
     total: int = 0
     db = conn.cursor()
+    category = CATEGORIES[0]
     search_text: str = ''
-    sql: str = "SELECT id,name,size FROM record WHERE tsv @@ to_tsquery('jiebacfg', %s) LIMIT %s;"
+    sql: str = "SELECT id,name,size FROM {} WHERE tsv @@ to_tsquery('jiebacfg', %s) LIMIT %s;"
     docs = []
     result = '{"erorr": "Invalid query format"}'.encode()
 
@@ -66,9 +69,15 @@ class SearchHanlder(BaseHTTPRequestHandler):
 
     def do_SEARCH(self):
         self.protocol_version = 'HTTP/1.1'
+        print(self.path)
         path = self.path.split('?')
         if len(path) == 2:
             self.search_text = unquote(self.path.split('?')[1]).strip()
+            category = self.path.split('?')[0][1:]
+            if category in CATEGORIES:
+                self.category = category
+            else:
+                self.category = CATEGORIES[0]
             self.result = self.retrieve()
         else:
             self.send_response(400)
@@ -121,7 +130,7 @@ class SearchHanlder(BaseHTTPRequestHandler):
                 conn.rollback()
                 return json.dumps({"error": str(e).strip()}).encode()
 
-            self.db.execute(self.sql, (self.search_text, self.limit))
+            self.db.execute(SQL(self.sql).format(Identifier(self.category)), (self.search_text, self.limit))
             self.docs = self.db.fetchall()
         self.send_response(200)
         return json.dumps([{

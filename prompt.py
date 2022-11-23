@@ -1,4 +1,5 @@
 from psycopg2 import connect
+from psycopg2.sql import SQL, Identifier
 from prompt_toolkit import PromptSession, print_formatted_text as print, HTML
 from prompt_toolkit.formatted_text import FormattedText
 from prompt_toolkit.validation import Validator, ValidationError, DummyValidator
@@ -6,6 +7,7 @@ from prompt_toolkit.key_binding import KeyBindings
 from download import Download
 from humanize import naturalsize
 import re
+from type import CATEGORIES
 
 
 class SearchPrompt:
@@ -17,10 +19,14 @@ class SearchPrompt:
     skip: bool = False
     session = PromptSession()
     search_text: str = ''
+    category: str = CATEGORIES[0]
     docs = []
     bindings = KeyBindings()
 
-    def __init__(self, search_text: str = None):
+    def __init__(self, search_text: str = None, category: str = CATEGORIES[0]):
+
+        if category in CATEGORIES:
+            self.category = category
 
         @self.bindings.add('c-n')
         def _(event):
@@ -86,7 +92,7 @@ class SearchPrompt:
         print('')
         if self.search_text is not None and not self.skip:
             self.offset = 0
-            self.db.execute("SELECT id,name,size FROM record WHERE tsv @@ to_tsquery('jiebacfg', %s) LIMIT %s;", (self.search_text, self.limit))
+            self.db.execute(SQL("SELECT id,name,size FROM {} WHERE tsv @@ to_tsquery('jiebacfg', %s) LIMIT %s;").format(Identifier(self.category)), (self.search_text, self.limit))
             self.docs = self.db.fetchall()
             self.total = len(self.docs)
         print(HTML('We have in total <b>' + str(len(self.docs)) + '</b> results'))

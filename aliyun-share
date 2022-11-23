@@ -6,18 +6,18 @@
 # 2. An (aliyun)[https://www.aliyundrive.com/] account
 
 # Usage Example:
-# 1. Store share link index data into redis
-# > python3 ./aliyun-share https://www.aliyundrive.com/s/wnfVTd1u92T/folder/619010166fe8c7b3e00f4acd813c9ed47b5fbddc
-# 2. Invoke researches from redis
-# > python3 ./aliyun-share 'YOUR SEARCHES'
-# TODO: More friendly interface to parse search results
+# 1. Store share link index data into PostgreSQL within category book
+# > python3 ./aliyun-share https://www.aliyundrive.com/s/wnfVTd1u92T book
+# 2. Invoke researches from database within category book
+# > python3 ./aliyun-share 'YOUR SEARCHES' book
 
 import re
 import sys
 import tempfile
-
+from type import CATEGORIES
 from aligo import Aligo
-import psycopg2
+from psycopg2 import connect
+from psycopg2.sql import SQL, Identifier
 from download import Download
 from datetime import datetime
 import logging
@@ -34,8 +34,17 @@ update_interval = 30 * 60
 expired_time = datetime.now().timestamp() + update_interval
 
 
-conn = psycopg2.connect("dbname=alibrary")
+conn = connect("dbname=alibrary")
 cur = conn.cursor()
+
+category = CATEGORIES[0]
+
+if len(sys.argv) == 3 and sys.argv[2] in CATEGORIES:
+    category = sys.argv[2]
+
+
+cur.execute(SQL("CREATE TABLE IF NOT EXISTS {} (id char(52) PRIMARY KEY, name TEXT, size INTEGER, tsv TSVECTOR GENERATED ALWAYS AS (to_tsvector('jiebacfg', name)) STORED);").format(Identifier(category)))
+cur.execute(SQL("CREATE INDEX IF NOT EXISTS {} ON {} USING GIN (tsv);").format(Identifier(category + '_idx'), Identifier(category)))
 
 
 def get_share_id(
@@ -59,7 +68,7 @@ def get_file_id(share_id: str = None) -> str:
 
 
 def record(share_info,
-           share_token: str = None):
+           share_token: str = None, category: str = 'book'):
 
     if share_token is None:
         share_token: str = str(ali.get_share_token(share_info.share_id))
@@ -87,10 +96,8 @@ def record(share_info,
         print('Add folder ', share_info.name)
     elif share_info.type == 'file':
         id = share_info.share_id + ':' + share_info.file_id
-        cur.execute("SELECT EXISTS(SELECT 1 FROM record WHERE id = %s) LIMIT 1;", (share_info.file_id,))
-        if cur.fetchone()[0]:
-            cur.execute("INSERT INTO record (id, name, size) VALUES (%s, %s, %s);",
-                        (id, share_info.name, share_info.size // 1024))
+        cur.execute(SQL("INSERT INTO {} (id, name, size) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING;").format(Identifier(category)),
+                    (id, share_info.name, share_info.size // 1024))
 
 
 share_id = get_share_id()
@@ -109,7 +116,7 @@ if share_id:
         Download(share_info=share_info)
     else:
         from prompt import SearchPrompt
-        SearchPrompt()
+        SearchPrompt(category=category)
 else:
     from prompt import SearchPrompt
-    SearchPrompt(search_text=sys.argv[1])
+    SearchPrompt(search_text=sys.argv[1], category=category)
