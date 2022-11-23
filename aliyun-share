@@ -29,8 +29,8 @@ if len(sys.argv) == 1:
     Auth(name='aligo')._refresh_token()
     sys.exit()
 
-# Use global variables to refresh share_token after each 30 mins
-update_interval = 30 * 60
+# Use global variables to refresh share_token after around 2 hours
+update_interval = 7100
 expired_time = datetime.now().timestamp() + update_interval
 
 
@@ -42,9 +42,11 @@ category = CATEGORIES[0]
 if len(sys.argv) == 3 and sys.argv[2] in CATEGORIES:
     category = sys.argv[2]
 
+print("Current category is ", category)
 
 cur.execute(SQL("CREATE TABLE IF NOT EXISTS {} (id char(52) PRIMARY KEY, name TEXT, size INTEGER, tsv TSVECTOR GENERATED ALWAYS AS (to_tsvector('jiebacfg', name)) STORED);").format(Identifier(category)))
 cur.execute(SQL("CREATE INDEX IF NOT EXISTS {} ON {} USING GIN (tsv);").format(Identifier(category + '_idx'), Identifier(category)))
+conn.commit()
 
 
 def get_share_id(
@@ -67,8 +69,7 @@ def get_file_id(share_id: str = None) -> str:
         return ali.get_share_info(share_id=share_id).file_infos[0].file_id
 
 
-def record(share_info,
-           share_token: str = None, category: str = 'book'):
+def record(share_info, share_token: str = None):
 
     if share_token is None:
         share_token: str = str(ali.get_share_token(share_info.share_id))
@@ -94,6 +95,7 @@ def record(share_info,
                 print(file)
         cur.execute("INSERT INTO folder (id) VALUES (%s);", (share_info.file_id,))
         print('Add folder ', share_info.name)
+        conn.commit()
     elif share_info.type == 'file':
         id = share_info.share_id + ':' + share_info.file_id
         cur.execute(SQL("INSERT INTO {} (id, name, size) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING;").format(Identifier(category)),

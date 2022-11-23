@@ -1,1 +1,1 @@
-CATEGORIES = ["book", "movie", "music", "education", "tutorial"]
+CATEGORIES = ["book", "collection"]
