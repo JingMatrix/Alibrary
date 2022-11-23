@@ -17,6 +17,8 @@ if os.path.exists(os.path.dirname(os.path.realpath(__file__)) + '/relay.py'):
 logging.basicConfig(filename='alibrary.log', level=logging.ERROR, format='%(message)s')
 conn = connect("dbname=alibrary")
 
+conn.cursor().execute("CREATE TABLE IF NOT EXISTS ip (ipv4 char(16) PRIMARY KEY);")
+
 
 class SearchHanlder(BaseHTTPRequestHandler):
     offset: int = 0
@@ -39,6 +41,11 @@ class SearchHanlder(BaseHTTPRequestHandler):
                              self.headers))
 
     def handle_one_request(self):
+        ip = self.client_address[0]
+        self.db.execute("SELECT EXISTS(SELECT 1 FROM ip WHERE ipv4 = %s) LIMIT 1;", (ip,))
+        if self.db.fetchone()[0]:
+            return
+
         try:
             self.raw_requestline = self.rfile.readline(65537)
             if len(self.raw_requestline) > 65536:
@@ -51,7 +58,8 @@ class SearchHanlder(BaseHTTPRequestHandler):
                 self.close_connection = True
                 return
             if not self.parse_request():
-                self.error_LOG()
+                logging.error("Ban ip: {}".format(ip))
+                self.db.execute("INSERT INTO ip (ipv4) VALUES (%s) ON CONFLICT DO NOTHING;", (ip,))
                 # An error code has been sent, just exit
                 return
             mname = 'do_' + self.command
@@ -69,7 +77,6 @@ class SearchHanlder(BaseHTTPRequestHandler):
 
     def do_SEARCH(self):
         self.protocol_version = 'HTTP/1.1'
-        print(self.path)
         path = self.path.split('?')
         if len(path) == 2:
             self.search_text = unquote(self.path.split('?')[1]).strip()
