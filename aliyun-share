@@ -42,7 +42,7 @@ category = CATEGORIES[0]
 if len(sys.argv) == 3 and sys.argv[2] in CATEGORIES:
     category = sys.argv[2]
 
-print("Current category is ", category)
+print("Current category is", category)
 
 cur.execute(SQL("CREATE TABLE IF NOT EXISTS {} (id char(52) PRIMARY KEY, name TEXT, size INTEGER, tsv TSVECTOR GENERATED ALWAYS AS (to_tsvector('jiebacfg', name)) STORED);").format(Identifier(category)))
 cur.execute(SQL("CREATE INDEX IF NOT EXISTS {} ON {} USING GIN (tsv);").format(Identifier(category + '_idx'), Identifier(category)))
@@ -116,9 +116,6 @@ if share_id:
     conn.close()
     if share_info.type == 'file':
         Download(share_info=share_info)
-    else:
-        from prompt import SearchPrompt
-        SearchPrompt(category=category)
 else:
     from prompt import SearchPrompt
     SearchPrompt(search_text=sys.argv[1], category=category)
