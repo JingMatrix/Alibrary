@@ -18,6 +18,7 @@ logging.basicConfig(filename='alibrary.log', level=logging.ERROR, format='%(mess
 conn = connect("dbname=alibrary")
 
 conn.cursor().execute("CREATE TABLE IF NOT EXISTS ip (ipv4 char(16) PRIMARY KEY);")
+conn.commit()
 
 
 class SearchHanlder(BaseHTTPRequestHandler):
@@ -40,6 +41,11 @@ class SearchHanlder(BaseHTTPRequestHandler):
                              self.request_version,
                              self.headers))
 
+    def ban(self, ip: str):
+        logging.error("Ban ip: {}".format(ip))
+        self.db.execute("INSERT INTO ip (ipv4) VALUES (%s) ON CONFLICT DO NOTHING;", (ip,))
+        conn.commit()
+
     def handle_one_request(self):
         ip = self.client_address[0]
         self.db.execute("SELECT EXISTS(SELECT 1 FROM ip WHERE ipv4 = %s) LIMIT 1;", (ip,))
@@ -58,12 +64,12 @@ class SearchHanlder(BaseHTTPRequestHandler):
                 self.close_connection = True
                 return
             if not self.parse_request():
-                logging.error("Ban ip: {}".format(ip))
-                self.db.execute("INSERT INTO ip (ipv4) VALUES (%s) ON CONFLICT DO NOTHING;", (ip,))
+                self.ban(ip)
                 # An error code has been sent, just exit
                 return
             mname = 'do_' + self.command
             if not hasattr(self, mname):
+                self.ban(ip)
                 self.error_LOG()
                 return
             method = getattr(self, mname)
