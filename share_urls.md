@@ -5,6 +5,7 @@ The following links are already indexed as samples in the last release.
 ## Book
 
 - [电子书](https://www.aliyundrive.com/s/fJWHEjWR6hm), 552544 records.
+- [许立志](https://www.aliyundrive.com/s/stADjg7jkEK), 4 records.
 
 ## Collection
 

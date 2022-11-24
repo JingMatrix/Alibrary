@@ -1,6 +1,6 @@
 TRUNCATE folder;
 
-DELETE FROM book WHERE id NOT LIKE 'fJWHEjWR6hm%';
+/* DELETE FROM book WHERE id NOT LIKE 'fJWHEjWR6hm%'; */
 INSERT INTO folder VALUES ('62c7bd377a973ce1cc624b5bbce2b50807c5fee6');
 
 DELETE FROM collection WHERE id NOT LIKE 'Fu2bmBPxeG8%';
