@@ -53,4 +53,5 @@ As for search syntax, please refer to the [tsquery](https://www.postgresql.org/d
 - [x] User-friendly front end for public usage
 - [x] Migrate database to `PostgresSQL`
 - [x] Add more resource categories
+- [x] Add systemd integration
 - [ ] Index share folders
