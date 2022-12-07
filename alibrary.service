@@ -1,11 +1,14 @@
 [Unit]
+Requires=postgresql.service
+After=postgresql.service
 Description=Alibray Python3 backend
 
 [Service]
 Restart=always
+User=_USER_
 RuntimeMaxSec=1d
 WorkingDirectory=_PWD_
 ExecStart=python3 search.py
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target
