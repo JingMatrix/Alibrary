@@ -28,8 +28,7 @@ We use the following projects:
 The following host demo sites are mirrors to each other:
 1. [on github.io](https://jingmatrix.github.io/en/Alibrary),
 2. [on onerender.com](https://jianyu-ma.onrender.com/en/Alibrary),
-3. [on netlify.app](https://jianyu-ma.netlify.app/en/Alibrary),
-4. [on math.cnrs.fr](https://jianyu-ma.perso.math.cnrs.fr/en/Alibrary).
+3. [on netlify.app](https://jianyu-ma.netlify.app/en/Alibrary).
 
 Their datasets are the same, `alibrary.sql` in [v2.0](https://github.com/JingMatrix/Alibrary/releases/tag/v2.0).
 
